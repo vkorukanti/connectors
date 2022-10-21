@@ -36,6 +36,9 @@ private[standalone] object SchemaUtils {
     names.find(_.contains("\n")).foreach(col => throw DeltaErrors.invalidColumnName(col))
   }
 
+  def prettyFieldName(columnPath: Seq[String]): String =
+    columnPath.map(n => if (n.contains(".")) s"`$n`" else n).mkString(".")
+
   /**
    * Go through the schema to look for unenforceable NOT NULL constraints and throw when they're
    * encountered.
@@ -173,9 +176,6 @@ private[standalone] object SchemaUtils {
     case _ => true
   }
 
-  private def prettyFieldName(columnPath: Seq[String]): String =
-    columnPath.map(n => if (n.contains(".")) s"`$n`" else n).mkString(".")
-
   private object ParquetSchemaConverter {
     def checkFieldNames(names: Seq[String]): Unit = {
       names.foreach(checkFieldName)
@@ -195,5 +195,67 @@ private[standalone] object SchemaUtils {
         throw new DeltaStandaloneException(message)
       }
     }
+  }
+
+  /**
+   * Copied verbatim from Apache Spark.
+   *
+   * Returns a field in this struct and its child structs, case insensitively. This is slightly less
+   * performant than the case sensitive version.
+   *
+   * If includeCollections is true, this will return fields that are nested in maps and arrays.
+   *
+   * @param fieldNames The path to the field, in order from the root. For example, the column
+   *                   nested.a.b.c would be Seq("nested", "a", "b", "c").
+   */
+  def findNestedFieldIgnoreCase(
+      schema: StructType,
+      fieldNames: Seq[String],
+      includeCollections: Boolean = false): Option[StructField] = {
+
+    @scala.annotation.tailrec
+    def findRecursively(
+        dataType: DataType,
+        fieldNames: Seq[String],
+        includeCollections: Boolean): Option[StructField] = {
+
+      (fieldNames, dataType, includeCollections) match {
+        case (Seq(fieldName, names @ _*), struct: StructType, _) =>
+          val field = struct.getFields.find(_.getName().equalsIgnoreCase(fieldName))
+          if (names.isEmpty || field.isEmpty) {
+            field
+          } else {
+            findRecursively(field.get.getDataType, names, includeCollections)
+          }
+
+        case (_, _, false) => None // types nested in maps and arrays are not used
+
+        case (Seq("key"), map: MapType, true) =>
+          // return the key type as a struct field to include nullability
+          Some(new StructField("key", map.getKeyType, false))
+
+        case (Seq("key", names @ _*), map: MapType, true) =>
+          findRecursively(map.getKeyType, names, includeCollections)
+
+        case (Seq("value"), map: MapType, true) =>
+          // return the value type as a struct field to include nullability
+          Some(new StructField("value", map.getValueType, map.valueContainsNull()))
+
+        case (Seq("value", names @ _*), map: MapType, true) =>
+          findRecursively(map.getValueType, names, includeCollections)
+
+        case (Seq("element"), array: ArrayType, true) =>
+          // return the element type as a struct field to include nullability
+          Some(new StructField("element", array.getElementType, array.containsNull()))
+
+        case (Seq("element", names @ _*), array: ArrayType, true) =>
+          findRecursively(array.getElementType, names, includeCollections)
+
+        case _ =>
+          None
+      }
+    }
+
+    findRecursively(schema, fieldNames, includeCollections)
   }
 }

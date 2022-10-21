@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.Path
 import io.delta.standalone.exceptions._
 import io.delta.standalone.types.{DataType, StructType}
 
+import io.delta.standalone.internal.DeltaColumnMappingMode
 import io.delta.standalone.internal.actions.{CommitInfo, Protocol}
 import io.delta.standalone.internal.util.JsonUtils
 
@@ -302,6 +303,14 @@ private[internal] object DeltaErrors {
       s"The Delta table configuration $prop cannot be specified by the user")
   }
 
+  /**
+   * We have plans to support more column mapping modes, but they are not implemented yet,
+   * so we error for now to be forward compatible with tables created in the future.
+   */
+  def unsupportedColumnMappingMode(mode: String): Throwable =
+    new ColumnMappingUnsupportedException(s"The column mapping mode `$mode` is " +
+      s"not supported for this Delta version. Please upgrade if you want to use this mode.")
+
   def unknownConfigurationKeyException(confKey: String): Throwable = {
     new DeltaStandaloneException(s"Unknown configuration was specified: $confKey")
   }
@@ -347,6 +356,64 @@ private[internal] object DeltaErrors {
   def nonPartitionColumnAbsentException(): Throwable = {
     new DeltaStandaloneException("Data written into Delta needs to contain at least one " +
       "non-partitioned column")
+  }
+
+  def changeColumnMappingModeNotSupported(oldMode: String, newMode: String): Throwable = {
+    // TODO: improve error message
+    new ColumnMappingUnsupportedException(
+      s"Column mapping upgrade from $oldMode to $newMode is not supported")
+  }
+
+  def changeColumnMappingModeOnOldProtocol(
+      oldProtocol: Protocol): Throwable = {
+    // TODO: improve error message
+    new ColumnMappingUnsupportedException("Need to upgrade the table protocol")
+  }
+
+  def missingColumnId(mode: DeltaColumnMappingMode, field: String): Throwable = {
+    // TODO: error message improvement
+    new ColumnMappingException(s"Missing column ID in column mapping mode `${mode.name}`" +
+        s" in the field: $field", mode)
+  }
+
+  def duplicatedColumnId(
+      mode: DeltaColumnMappingMode,
+      id: Long,
+      schema: StructType): Throwable = {
+    // TODO: error message improvement
+    new ColumnMappingException(
+      s"Found duplicated column id `$id` in column mapping mode `${mode.name}` \n" +
+          s"schema: \n ${schema}", mode
+      )
+  }
+
+  def duplicatedPhysicalName(
+      mode: DeltaColumnMappingMode,
+      physicalName: String,
+      schema: StructType): Throwable = {
+    // TODO: error message improvement
+    new ColumnMappingException(
+      s"Found duplicated physical name `$physicalName` in column mapping mode `${mode.name}` \n\t" +
+          s"schema: \n ${schema}", mode
+      )
+  }
+
+  def missingPhysicalName(mode: DeltaColumnMappingMode, field: String): Throwable = {
+    // TODO: error message improvement
+    new ColumnMappingException(s"Missing physical name in column mapping mode `${mode.name}`" +
+        s" in the field: $field", mode)
+  }
+
+  def schemaChangeDuringMappingModeChangeNotSupported(
+      oldSchema: StructType,
+      newSchema: StructType): Throwable = {
+    // TODO: error message improvement
+    new ColumnMappingUnsupportedException("Schema change not supported")
+  }
+
+  def columnNotFound(path: Seq[String], schema: StructType): Throwable = {
+    // TODO: error message improvement
+    new IllegalArgumentException(s"${path.toString()} not found")
   }
 
   ///////////////////////////////////////////////////////////////////////////

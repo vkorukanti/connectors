@@ -202,6 +202,15 @@ private[internal] class OptimisticTransactionImpl(
       isCreatingNewTable = true
     }
 
+    val latestMetadataJ = DeltaColumnMapping.verifyAndUpdateMetadataChange(
+      deltaLog,
+      protocol,
+      snapshot.getMetadata,
+      metadataJ,
+      isCreatingNewTable)
+
+    latestMetadata = ConversionUtils.convertMetadataJ(latestMetadataJ)
+
     if (snapshot.metadataScala.schemaString != latestMetadata.schemaString) {
       SchemaUtils.checkUnenforceableNotNullConstraints(latestMetadata.schema)
     }
@@ -456,7 +465,14 @@ private[internal] class OptimisticTransactionImpl(
 
   private def verifyNewMetadata(metadata: Metadata): Unit = {
     SchemaMergingUtils.checkColumnNameDuplication(metadata.schema, "in the metadata update")
-    SchemaUtils.checkFieldNames(SchemaMergingUtils.explodeNestedFieldNames(metadata.dataSchema))
+    if (metadata.columnMappingMode == NoMapping) {
+      // When column mapping is disabled, check the column names don't called any unsupported
+      // characters
+      SchemaUtils.checkFieldNames(SchemaMergingUtils.explodeNestedFieldNames(metadata.dataSchema))
+    } else {
+      DeltaColumnMapping.checkColumnIdAndPhysicalNameAssignments(
+        metadata.schema, metadata.columnMappingMode)
+    }
 
     try {
       SchemaUtils.checkFieldNames(metadata.partitionColumns)
@@ -464,7 +480,8 @@ private[internal] class OptimisticTransactionImpl(
       case e: DeltaStandaloneException => throw DeltaErrors.invalidPartitionColumn(e)
     }
 
-    Protocol.checkMetadataProtocolProperties(metadata, protocol)
+    // TODO: comment out the check, until we have proper protocol upgrade in place
+    // Protocol.checkMetadataProtocolProperties(metadata, protocol)
   }
 
   /**

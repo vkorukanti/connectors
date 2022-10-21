@@ -183,6 +183,17 @@ public final class FieldMetadata {
             return this;
         }
 
+        // TODO: See if there is a better pattern
+        public Builder withMetadata(Map<String, Object> metadata) {
+            this.metadata.putAll(metadata);
+            return this;
+        }
+
+        public Builder remove(String key) {
+            this.metadata.remove(key);
+            return this;
+        }
+
         /**
          * @return a new {@link FieldMetadata} with the mappings added to the builder
          */

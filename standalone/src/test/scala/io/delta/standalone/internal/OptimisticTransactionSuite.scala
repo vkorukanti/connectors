@@ -27,7 +27,8 @@ import io.delta.standalone.DeltaLog
 import io.delta.standalone.actions.{Action => ActionJ, AddFile => AddFileJ, CommitInfo, Metadata => MetadataJ, Protocol, SetTransaction => SetTransactionJ}
 import io.delta.standalone.types.{IntegerType, StringType, StructField, StructType}
 
-import io.delta.standalone.internal.actions.{AddFile, Metadata}
+import io.delta.standalone.internal.DeltaColumnMapping.{COLUMN_MAPPING_METADATA_ID_KEY, COLUMN_MAPPING_PHYSICAL_NAME_KEY}
+import io.delta.standalone.internal.actions.AddFile
 import io.delta.standalone.internal.util.TestUtils._
 
 class OptimisticTransactionSuite extends OptimisticTransactionSuiteBase {
@@ -314,6 +315,47 @@ class OptimisticTransactionSuite extends OptimisticTransactionSuiteBase {
       assert(committedPath.isAbsolute && !committedPath.isAbsoluteAndSchemeAuthorityNull)
       // Path is unaltered
       assert(committedAddFile.getPath === "file:/absolute/path/to/file/test.parquet")
+    }
+  }
+
+  test("Upgrade to column mapping mode 'name' on the table") {
+    withTempDir { dir =>
+      var log = DeltaLog.forTable(new Configuration(), dir.getCanonicalPath)
+      var txn = log.startTransaction()
+      val addFile = AddFile("/absolute/path/to/file/test.parquet", Map(), 0, 0, true)
+      txn.updateMetadata(metadata_colXY)
+      txn.commit( addFile :: Nil, op, "test")
+
+      log = DeltaLog.forTable(new Configuration(), dir.getCanonicalPath)
+      txn = log.startTransaction()
+
+      val oldMetadata = txn.metadata()
+      val newConfig = new java.util.HashMap[String, String]()
+      newConfig.putAll(oldMetadata.getConfiguration)
+
+      // Add column mapping related configs
+      newConfig.put("delta.minReaderVersion", "2")
+      newConfig.put("delta.minWriterVersion", "5")
+      newConfig.put("delta.columnMapping.mode", "name")
+
+      val newMetadata = oldMetadata.copyBuilder().configuration(newConfig).build()
+      txn.updateMetadata(newMetadata)
+      txn.commit(Seq.empty, op, "test")
+
+      log = DeltaLog.forTable(new Configuration(), dir.getCanonicalPath)
+      txn = log.startTransaction()
+
+      val updatedSchema = txn.metadata().getSchema();
+
+      def assertColumnMappingMetadata(
+          field: StructField, expectedId: Long, expectedPhyName: String): Unit = {
+        val actualMetadata = field.getMetadata()
+        assert(actualMetadata.get(COLUMN_MAPPING_METADATA_ID_KEY) == expectedId)
+        assert(actualMetadata.get(COLUMN_MAPPING_PHYSICAL_NAME_KEY) == expectedPhyName)
+      }
+
+      assertColumnMappingMetadata(updatedSchema.get("x"), expectedId = 1L, expectedPhyName = "x")
+      assertColumnMappingMetadata(updatedSchema.get("y"), expectedId = 2L, expectedPhyName = "y")
     }
   }
 }

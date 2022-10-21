@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.annotation.{JsonDeserialize, JsonSerialize
 
 import io.delta.standalone.types.StructType
 
+import io.delta.standalone.internal.{DeltaColumnMappingMode, DeltaConfigs}
 import io.delta.standalone.internal.util.{DataTypeParser, JsonUtils}
 
 private[internal] object Action {
@@ -190,6 +191,17 @@ private[internal] case class Metadata(
     configuration: Map[String, String] = Map.empty,
     @JsonDeserialize(contentAs = classOf[java.lang.Long])
     createdTime: Option[Long] = Some(System.currentTimeMillis())) extends Action {
+
+  @JsonIgnore
+  lazy val columnMappingMode: DeltaColumnMappingMode =
+    DeltaConfigs.COLUMN_MAPPING_MODE.fromMetadata(this)
+
+  /**
+   * Column mapping max id for this table
+   */
+  @JsonIgnore
+  lazy val columnMappingMaxId: Long =
+    DeltaConfigs.COLUMN_MAPPING_MAX_ID.fromMetadata(this)
 
   /** Returns the schema as a [[StructType]] */
   @JsonIgnore

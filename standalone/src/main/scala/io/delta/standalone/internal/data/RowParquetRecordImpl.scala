@@ -154,6 +154,7 @@ private[internal] case class RowParquetRecordImpl(
     }
 
     // Data Field
+    val physicalColName = schemaField.getPhysicalName().orElse(fieldName)
     val parquetVal = record.get(fieldName)
 
     if (parquetVal == NullValue && !schemaField.isNullable) {

@@ -39,6 +39,7 @@
 package io.delta.standalone.types;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * A field inside a {@link StructType}.
@@ -107,6 +108,26 @@ public final class StructField {
      */
     public FieldMetadata getMetadata() {
         return metadata;
+    }
+
+    /**
+     * @return the physical name if exists.
+     */
+    public Optional<String> getPhysicalName() {
+        return Optional.ofNullable(metadata.get("delta.columnMapping.physicalName"))
+                .map(Object::toString);
+    }
+
+    public StructField withNewMetadata(FieldMetadata newMetadata) {
+        return new StructField(name, dataType, nullable, newMetadata);
+    }
+
+    public StructField withNewName(String newName) {
+        return new StructField(newName, dataType, nullable, metadata);
+    }
+
+    public StructField withNewDataType(DataType newDataType) {
+        return new StructField(name, newDataType, nullable, metadata);
     }
 
     /**
