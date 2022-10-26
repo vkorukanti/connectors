@@ -26,12 +26,17 @@ import com.fasterxml.jackson.databind.annotation.{JsonDeserialize, JsonSerialize
 
 import io.delta.standalone.types.StructType
 
+import io.delta.standalone.internal.DeltaConfigs
+import io.delta.standalone.internal.exception.DeltaErrors
 import io.delta.standalone.internal.util.{DataTypeParser, JsonUtils}
 
 private[internal] object Action {
   /** The maximum version of the protocol that this version of Delta Standalone understands. */
-  val maxSupportedReaderVersion = 1
-  val maxSupportedWriterVersion = 2
+  // Note: features between version (1,2) and (2,5) are in development. We bump to (2,5) now
+  // since the features are not being implemented linearly. This does not affect any public APIs
+  // and nothing will be merged to master until all features have been completed/supported.
+  val maxSupportedReaderVersion = 2
+  val maxSupportedWriterVersion = 5
   val protocolVersion: Protocol = Protocol(maxSupportedReaderVersion, maxSupportedWriterVersion)
 
   def fromJson(json: String): Action = {
@@ -61,8 +66,8 @@ private[internal] sealed trait Action {
  * fields that they do not understand.
  */
 private[internal] case class Protocol(
-    minReaderVersion: Int = Action.maxSupportedReaderVersion,
-    minWriterVersion: Int = Action.maxSupportedWriterVersion) extends Action {
+    minReaderVersion: Int,
+    minWriterVersion: Int) extends Action {
   override def wrap: SingleAction = SingleAction(protocol = this)
 
   @JsonIgnore
@@ -78,6 +83,32 @@ private[internal] object Protocol {
       s"protocol version ($MIN_READER_VERSION_PROP) as part of table properties")
     assert(!metadata.configuration.contains(MIN_WRITER_VERSION_PROP), s"Should not have the " +
       s"protocol version ($MIN_WRITER_VERSION_PROP) as part of table properties")
+  }
+
+  /** Check that the protocol is compatible with any features enabled in the table metadata */
+  def checkMetadataFeatureProtocolCompatibility(metadata: Metadata, protocol: Protocol): Unit = {
+    // look at Protocol.requiredMinimumProtocol in Delta
+
+    // Column invariants
+    // check for invariants in the schema
+
+    // Append-only
+    if (DeltaConfigs.IS_APPEND_ONLY.fromMetadata(metadata) && protocol.minWriterVersion < 2) {
+      // todo: when we add the feature enums we can use their string here (and all below)
+      throw DeltaErrors.insufficientWriterVersion(protocol, 2, "appendOnly")
+    }
+
+    // Check constraints
+
+    // Generated columns
+
+    // CDF
+    // check config
+
+    // Column mapping
+    // check column mapping mode
+
+    // todo: Should we check for any unsupported features? i.e. identity columns
   }
 }
 

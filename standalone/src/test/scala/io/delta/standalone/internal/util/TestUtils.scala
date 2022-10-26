@@ -23,9 +23,12 @@ import java.util.UUID
 import scala.collection.JavaConverters._
 
 import org.apache.commons.io.FileUtils
+import org.apache.hadoop.conf.Configuration
+import org.scalatest.Matchers.intercept
 
 import io.delta.standalone.actions.{Action => ActionJ, AddFile => AddFileJ}
 
+import io.delta.standalone.internal.DeltaLogImpl
 import io.delta.standalone.internal.actions.{Action, AddFile}
 
 object TestUtils {
@@ -47,4 +50,20 @@ object TestUtils {
   implicit def addFileSeqToList(seq: Seq[AddFile]): java.util.List[AddFileJ] =
     seq.map(ConversionUtils.convertAddFile).asJava
 
+  def testException[T <: Throwable](f: => Any, messageContains: String)
+    (implicit manifest: Manifest[T]): Unit = {
+    val e = intercept[T]{
+      f
+    }.getMessage
+    assert(e.contains(messageContains))
+  }
+
+  /**
+   * Get a DeltaLog instance with the connector's supported protocol set to Standalone's supported
+   * protocol.
+   */
+  def getDeltaLogWithMaxFeatureSupport(conf: Configuration, path: String) : DeltaLogImpl = {
+    DeltaLogImpl.forTable(conf, path,
+      Action.maxSupportedReaderVersion, Action.maxSupportedWriterVersion)
+  }
 }

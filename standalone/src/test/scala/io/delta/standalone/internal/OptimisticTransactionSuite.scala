@@ -23,11 +23,13 @@ import scala.collection.JavaConverters._
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 
-import io.delta.standalone.DeltaLog
+import io.delta.standalone.{DeltaLog, Operation}
 import io.delta.standalone.actions.{Action => ActionJ, AddFile => AddFileJ, CommitInfo, Metadata => MetadataJ, Protocol, SetTransaction => SetTransactionJ}
 import io.delta.standalone.types.{IntegerType, StringType, StructField, StructType}
 
 import io.delta.standalone.internal.actions.{AddFile, Metadata}
+import io.delta.standalone.internal.exception.DeltaErrors.InvalidProtocolVersionException
+import io.delta.standalone.internal.util.ConversionUtils
 import io.delta.standalone.internal.util.TestUtils._
 
 class OptimisticTransactionSuite extends OptimisticTransactionSuiteBase {
@@ -314,6 +316,52 @@ class OptimisticTransactionSuite extends OptimisticTransactionSuiteBase {
       assert(committedPath.isAbsolute && !committedPath.isAbsoluteAndSchemeAuthorityNull)
       // Path is unaltered
       assert(committedAddFile.getPath === "file:/absolute/path/to/file/test.parquet")
+    }
+  }
+
+  ///////////////////////////////////////////////////////////////////////////
+  // prepareCommit() protocol checks
+  ///////////////////////////////////////////////////////////////////////////
+
+  // TODO: unblock these tests once we allow writerVersion=1
+  ignore("appendOnly: metadata-protocol compatibility checks") {
+    val schema = new StructType(Array(new StructField("col1", new IntegerType(), true)))
+
+    // cannot set appendOnly=true with too low a protocol version
+    withTempDir { dir =>
+      val log = getDeltaLogWithMaxFeatureSupport(new Configuration(), dir.getCanonicalPath)
+      val txn = log.startTransaction()
+      txn.asInstanceOf[OptimisticTransactionImpl].upgradeProtocolVersion(1, 1)
+      val metadata = MetadataJ.builder().schema(schema)
+        // TODO: add a with config method to Metadata? at least add to TestUtils then
+        .configuration(Map(DeltaConfigs.IS_APPEND_ONLY.key -> "true").asJava)
+        .build()
+      testException[RuntimeException](
+        txn.commit(
+          Iterable(metadata).asJava,
+          new Operation(Operation.Name.MANUAL_UPDATE),
+          "test-engine-info"
+        ),
+        "Feature appendOnly requires at least writer version 2 but current " +
+          "table protocol is (1,1)"
+      )
+    }
+
+    // can enable appendOnly with sufficient protocol version
+    withTempDir { dir =>
+      val log = getDeltaLogWithMaxFeatureSupport(new Configuration(), dir.getCanonicalPath)
+      val txn = log.startTransaction()
+      txn.asInstanceOf[OptimisticTransactionImpl].upgradeProtocolVersion(1, 1)
+      val metadata = MetadataJ.builder().schema(schema)
+        .configuration(Map(DeltaConfigs.IS_APPEND_ONLY.key -> "true").asJava)
+        .build()
+      txn.commit(
+        Iterable(metadata).asJava,
+        new Operation(Operation.Name.MANUAL_UPDATE),
+        "test-engine-info"
+      )
+      assert(DeltaConfigs.IS_APPEND_ONLY.fromMetadata(
+          ConversionUtils.convertMetadataJ(log.startTransaction().metadata())))
     }
   }
 }

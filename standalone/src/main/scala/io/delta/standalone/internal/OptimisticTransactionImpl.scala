@@ -77,7 +77,7 @@ private[internal] class OptimisticTransactionImpl(
    */
   private var commitAttemptStartTime: Long = _
 
-  /** The protocol of the snapshot that this transaction is reading at. */
+  /** The protocol of the table version that is being committed in this transaction. */
   def protocol: Protocol = newProtocol.getOrElse(snapshot.protocolScala)
 
   /**
@@ -225,6 +225,19 @@ private[internal] class OptimisticTransactionImpl(
   }
 
   ///////////////////////////////////////////////////////////////////////////
+  // Internal Test-Only Methods
+  ///////////////////////////////////////////////////////////////////////////
+
+  // This is an internal test-only version of the eventual upgrade protocol by version API.
+  // Later it will be formally added to OptimisticTransaction (with unit tests)
+  private[standalone] def upgradeProtocolVersion(readerVersion: Int, writerVersion: Int): Unit = {
+    val upgradedProtocol = Protocol(readerVersion, writerVersion)
+    deltaLog.assertProtocolWrite(upgradedProtocol)
+    deltaLog.assertProtocolRead(upgradedProtocol)
+    newProtocol = Some(upgradedProtocol)
+  }
+
+  ///////////////////////////////////////////////////////////////////////////
   // Critical Internal-Only Methods
   ///////////////////////////////////////////////////////////////////////////
 
@@ -266,6 +279,9 @@ private[internal] class OptimisticTransactionImpl(
 
       // If this is the first commit and no protocol is specified, initialize the protocol version.
       if (!finalActions.exists(_.isInstanceOf[Protocol])) {
+        // TODO: update our default protocol version for new tables (see newProtocol)
+        //  We will have to decide/solidify how to select the default version
+        // See Protocol.forNewTable
         finalActions = protocol +: finalActions
       }
 
@@ -276,9 +292,20 @@ private[internal] class OptimisticTransactionImpl(
     }
 
     val protocolOpt = finalActions.collectFirst{ case p: Protocol => p }
-    if (protocolOpt.isDefined) {
-      assert(protocolOpt.get == Protocol(), s"Invalid Protocol ${protocolOpt.get.simpleString}. " +
-        s"Currently only Protocol readerVersion 1 and writerVersion 2 is supported.")
+    protocolOpt.foreach { protocol =>
+      // TODO: we've decided to block directly committing protocol actions. This would be a breaking
+      //  change since current releases do allow committing Protocol(1,2)
+
+      // Check the protocol version being committed is supported by Delta Standalone and the
+      // connector
+      // TODO: Once all Protocol version upgrades go through our protocol-specific APIs these checks
+      //  will be performed in those individual methods and these can be removed here
+      deltaLog.assertProtocolRead(protocol)
+      deltaLog.assertProtocolWrite(protocol)
+      // TODO: to maintain past behavior for now we don't allow writerVersion < 2
+      assert(protocol.minWriterVersion >= 2,
+        s"Invalid Protocol ${protocol.simpleString}. " +
+          s"Currently only Protocol readerVersion 1 and readerVersion 2 is supported")
     }
 
     val partitionColumns = metadataScala.partitionColumns.toSet
@@ -288,8 +315,6 @@ private[internal] class OptimisticTransactionImpl(
           a.partitionValues.keySet.toSeq, partitionColumns.toSeq)
       case _ => // nothing
     }
-
-    deltaLog.assertProtocolWrite(snapshot.protocolScala)
 
     // We make sure that this isn't an appendOnly table as we check if we need to delete files.
     val removes = actions.collect { case r: RemoveFile => r }
@@ -465,6 +490,7 @@ private[internal] class OptimisticTransactionImpl(
     }
 
     Protocol.checkMetadataProtocolProperties(metadata, protocol)
+    Protocol.checkMetadataFeatureProtocolCompatibility(metadata, protocol)
   }
 
   /**

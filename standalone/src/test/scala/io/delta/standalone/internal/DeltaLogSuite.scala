@@ -335,8 +335,9 @@ abstract class DeltaLogSuiteBase extends FunSuite {
       withLogForGoldenTable("deltalog-invalid-protocol-version") { _ => }
     }
 
-    assert(e.getMessage === new DeltaErrors.InvalidProtocolVersionException(Action.protocolVersion,
-      Protocol(99)).getMessage)
+    assert(e.getMessage === new DeltaErrors.InvalidStandaloneProtocolVersionException(
+      Action.protocolVersion,
+      Protocol(99, 2)).getMessage)
   }
 
   test("get commit info") {

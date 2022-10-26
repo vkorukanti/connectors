@@ -33,6 +33,7 @@ import io.delta.standalone.types._
 
 import io.delta.standalone.internal.actions._
 import io.delta.standalone.internal.exception.DeltaErrors
+import io.delta.standalone.internal.exception.DeltaErrors.InvalidProtocolVersionException
 import io.delta.standalone.internal.util.{ConversionUtils, SchemaUtils}
 import io.delta.standalone.internal.util.TestUtils._
 
@@ -251,10 +252,11 @@ class OptimisticTransactionLegacySuite extends FunSuite {
       val log = DeltaLog.forTable(new Configuration(), dir.getCanonicalPath)
 
       Seq(Protocol(1, 3), Protocol(1, 1), Protocol(2, 2)).foreach { protocol =>
-        val e = intercept[AssertionError] {
+        val e = intercept[Throwable] {
           log.startTransaction().commit(metadata :: protocol :: Nil, manualUpdate, engineInfo)
         }
-        assert(e.getMessage.contains("Invalid Protocol"))
+        assert(e.getMessage.contains("Invalid Protocol") ||
+          e.getMessage.contains(s"Delta protocol version ${protocol.simpleString} is too high"))
       }
     }
   }
@@ -262,13 +264,14 @@ class OptimisticTransactionLegacySuite extends FunSuite {
   test("can't change protocol to invalid version") {
     withTempDir { dir =>
       val log = DeltaLog.forTable(new Configuration(), dir.getCanonicalPath)
-      log.startTransaction().commit(metadata :: Protocol() :: Nil, manualUpdate, engineInfo)
+      log.startTransaction().commit(metadata :: Protocol(1, 2) :: Nil, manualUpdate, engineInfo)
 
       Seq(Protocol(1, 3), Protocol(1, 1), Protocol(2, 2)).foreach { protocol =>
-        val e = intercept[AssertionError] {
+        val e = intercept[Throwable] {
           log.startTransaction().commit(protocol :: Nil, manualUpdate, engineInfo)
         }
-        assert(e.getMessage.contains("Invalid Protocol"))
+        assert(e.getMessage.contains("Invalid Protocol") ||
+          e.getMessage.contains(s"Delta protocol version ${protocol.simpleString} is too high"))
       }
     }
   }
