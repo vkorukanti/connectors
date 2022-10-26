@@ -400,7 +400,7 @@ class SchemaUtilsSuite extends FunSuite {
   ////////////////////////////
   // findNestedFieldIgnoreCase
   ////////////////////////////
-  test("complex schema access") {
+  test("search nested columns in schema") {
     val st = new StringType()
     val it = new IntegerType()
     def m(a: DataType, b: DataType): MapType = new MapType(a, b, true)
@@ -481,5 +481,20 @@ class SchemaUtilsSuite extends FunSuite {
       val f = find(path)
       assert(f.isEmpty, s"$key should be empty")
     }
+  }
+
+  ////////////////////////////
+  // prettyFieldName
+  ////////////////////////////
+  test("pretty column name") {
+    val tests = Map(
+      Seq("a") -> "a",
+      Seq("a", "b") -> "a.b",
+      Seq("a", "b", "c") -> "a.b.c",
+      Seq("a.b", "c.d", "e") -> "`a.b`.`c.d`.e",
+      Seq("a.b") -> "`a.b`"
+    )
+
+    tests.foreach(test => assert(prettyFieldName(test._1) === test._2));
   }
 }
