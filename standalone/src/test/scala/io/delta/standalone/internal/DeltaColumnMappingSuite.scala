@@ -20,22 +20,23 @@ import scala.collection.mutable
 import org.scalatest.FunSuite
 
 import io.delta.standalone.exceptions.ColumnMappingUnsupportedException
-import io.delta.standalone.types.{DataType, IntegerType, StringType, StructField, StructType}
+import io.delta.standalone.types.{ArrayType, DataType, FieldMetadata, FloatType, IntegerType, LongType, MapType, StringType, StructField, StructType}
+import io.delta.standalone.types.FieldMetadata.builder
 
 import io.delta.standalone.internal.DeltaColumnMapping._
 import io.delta.standalone.internal.actions.{Metadata, Protocol}
+import io.delta.standalone.internal.util.{SchemaMergingUtils, SchemaUtils}
 
 
 class DeltaColumnMappingSuite extends FunSuite {
 
   // Set the column mapping mode to 'id' or unknown and expect unsupported error
   test("unsupported column mapping mode") {
-    val schema = struct(field("a", new IntegerType), field("b", new StringType))
     val ex = intercept[ColumnMappingUnsupportedException] {
       verifyAndUpdateMetadataChange(
         oldProtocol = protocol(1, 2),
-        oldMetadata = metadata(schema, Map.empty),
-        newMetadata = metadata(schema, withMode(Map.empty, "id")),
+        oldMetadata = metadata(simpleSchema, Map.empty),
+        newMetadata = metadata(simpleSchema, withMode(Map.empty, "id")),
         isCreatingNewTable = false)
     }
     assert(ex.getMessage contains "The column mapping mode `id` is not supported for this " +
@@ -43,12 +44,11 @@ class DeltaColumnMappingSuite extends FunSuite {
   }
 
   test("unsupported mode change: example: name to none") {
-    val schema = struct(field("a", new IntegerType), field("b", new StringType))
     val ex = intercept[ColumnMappingUnsupportedException] {
       verifyAndUpdateMetadataChange(
         oldProtocol = protocol(1, 2),
-        oldMetadata = metadata(schema, withMode(Map.empty, "name")),
-        newMetadata = metadata(schema, withMode(Map.empty, "none")),
+        oldMetadata = metadata(simpleSchema, withMode(Map.empty, "name")),
+        newMetadata = metadata(simpleSchema, withMode(Map.empty, "none")),
         isCreatingNewTable = false)
     }
     assert(ex.getMessage contains
@@ -56,12 +56,11 @@ class DeltaColumnMappingSuite extends FunSuite {
   }
 
   test("unsupported protocol version in existing table and no protocol upgrade in new metadata") {
-    val schema = struct(field("a", new IntegerType), field("b", new StringType))
     val ex = intercept[ColumnMappingUnsupportedException] {
       verifyAndUpdateMetadataChange(
         oldProtocol = protocol(1, 2),
-        oldMetadata = metadata(schema, Map.empty),
-        newMetadata = metadata(schema, withMode(Map.empty, "name")),
+        oldMetadata = metadata(simpleSchema, Map.empty),
+        newMetadata = metadata(simpleSchema, withMode(Map.empty, "name")),
         isCreatingNewTable = false)
     }
     assert(ex.getMessage contains "Your current table protocol version does not support " +
@@ -73,12 +72,11 @@ class DeltaColumnMappingSuite extends FunSuite {
   }
 
   test("unsupported protocol version in existing table and in new metadata") {
-    val schema = struct(field("a", new IntegerType), field("b", new StringType))
     val ex = intercept[ColumnMappingUnsupportedException] {
       verifyAndUpdateMetadataChange(
         oldProtocol = protocol(1, 2),
-        oldMetadata = metadata(schema, Map.empty),
-        newMetadata = metadata(schema,
+        oldMetadata = metadata(simpleSchema, Map.empty),
+        newMetadata = metadata(simpleSchema,
                                withProtocol(withMode(Map.empty, "name"), readerV = 1, writerV = 5)),
         isCreatingNewTable = false)
     }
@@ -91,34 +89,90 @@ class DeltaColumnMappingSuite extends FunSuite {
   }
 
   test("change mode=name on an existing table") {
-    val schema = struct(field("a", new IntegerType), field("b", new StringType))
     val updatedMetadata = verifyAndUpdateMetadataChange(
       oldProtocol = protocol(1, 2),
-      oldMetadata = metadata(schema, Map.empty),
-      newMetadata = metadata(schema,
+      oldMetadata = metadata(simpleSchema, Map.empty),
+      newMetadata = metadata(simpleSchema,
                             withProtocol(withMode(Map.empty, "name"), readerV = 2, writerV = 5)),
       isCreatingNewTable = false)
-    val newSchema = updatedMetadata.schema
-    assert(newSchema.getFields.size == 2)
-    assertColumnMappingMetadata(newSchema.get("a"), expectedId = 1, expectedPhyName = "a")
-    assertColumnMappingMetadata(newSchema.get("b"), expectedId = 2, expectedPhyName = "b")
+
+    val (actIds, actPhyNames) = extractIdsAndPhyNames(updatedMetadata.schema)
+    assert(actIds === simpleSchemaExpIds)
+    assert(actPhyNames === simpleSchemaExpPhyNames)
+  }
+
+  test("change mode=name on an existing table - complex types") {
+    val updatedMetadata = verifyAndUpdateMetadataChange(
+      oldProtocol = protocol(1, 2),
+      oldMetadata = metadata(complexSchema, Map.empty),
+      newMetadata = metadata(complexSchema,
+                             withProtocol(withMode(Map.empty, "name"), readerV = 2, writerV = 5)),
+      isCreatingNewTable = false)
+
+    val (actIds, actPhyNames) = extractIdsAndPhyNames(updatedMetadata.schema)
+    assert(actIds === complexSchemaExpIds)
+    assert(actPhyNames === complexSchemaExpPhyNames)
   }
 
   test("change mode=name on an new table") {
-    val schema = struct(field("a", new IntegerType), field("b", new StringType))
+    val updatedMetadata = verifyAndUpdateMetadataChange(
+      oldProtocol = protocol(1, 2),
+      oldMetadata = metadata(simpleSchema, Map.empty),
+      newMetadata = metadata(simpleSchema,
+                             withProtocol(withMode(Map.empty, "name"), readerV = 2, writerV = 5)),
+      isCreatingNewTable = true)
+
+    val (actIds, actPhyNames) = extractIdsAndPhyNames(updatedMetadata.schema)
+    assert(actIds === simpleSchemaExpIds)
+    actPhyNames.values.foreach(assertUUIDColumnName(_))
+  }
+
+  test("change mode=name on an new table - complex types") {
+    val updatedMetadata = verifyAndUpdateMetadataChange(
+      oldProtocol = protocol(1, 2),
+      oldMetadata = metadata(complexSchema, Map.empty),
+      newMetadata = metadata(complexSchema,
+                             withProtocol(withMode(Map.empty, "name"), readerV = 2, writerV = 5)),
+      isCreatingNewTable = true)
+
+    val newSchema = updatedMetadata.schema
+    val (actIds, actPhyNames) = extractIdsAndPhyNames(newSchema)
+    assert(actIds === complexSchemaExpIds)
+    actPhyNames.values.foreach(assertUUIDColumnName(_))
+  }
+
+  test("existing field metadata is preserved") {
+    val schema = struct(
+      field("a", new IntegerType)
+          .withNewMetadata(builder().putString("test", "testValue").build()),
+      field("b", new StringType)
+          .withNewMetadata(builder().putString("test2", "testValue2").build()))
+
     val updatedMetadata = verifyAndUpdateMetadataChange(
       oldProtocol = protocol(1, 2),
       oldMetadata = metadata(schema, Map.empty),
       newMetadata = metadata(schema,
                              withProtocol(withMode(Map.empty, "name"), readerV = 2, writerV = 5)),
       isCreatingNewTable = true)
-    val newSchema = updatedMetadata.schema
-    assert(newSchema.getFields.size == 2)
-    assertColumnMappingMetadata(newSchema.get("a"), expectedId = 1, expectedPhyName = "UUID")
-    assertColumnMappingMetadata(newSchema.get("b"), expectedId = 2, expectedPhyName = "UUID")
+
+    val (actIds, actPhyNames) = extractIdsAndPhyNames(updatedMetadata.schema)
+    assert(actIds === simpleSchemaExpIds)
+    actPhyNames.values.foreach(assertUUIDColumnName(_))
+
+    assert(updatedMetadata.schema.get("a").getMetadata.get("test") == "testValue")
+    assert(updatedMetadata.schema.get("b").getMetadata.get("test2") == "testValue2")
+
+    // expect three entries (two from column mapping and one existing one)
+    assert(updatedMetadata.schema.get("a").getMetadata.getEntries.size() == 3)
+    assert(updatedMetadata.schema.get("b").getMetadata.getEntries.size() == 3)
   }
 
   private def struct(fields: StructField *): StructType = new StructType(fields.toArray)
+
+  private def map(keyType: DataType, valueType: DataType): MapType =
+    new MapType(keyType, valueType, true)
+
+  private def array(elementType: DataType): ArrayType = new ArrayType(elementType, true)
 
   private def field(name: String, dataType: DataType): StructField = new StructField(name, dataType)
 
@@ -146,15 +200,89 @@ class DeltaColumnMappingSuite extends FunSuite {
     newConf.toMap
   }
 
-  def assertColumnMappingMetadata(
-      field: StructField, expectedId: Long, expectedPhyName: String): Unit = {
-    val actualMetadata = field.getMetadata()
-    assert(actualMetadata.get(COLUMN_MAPPING_METADATA_ID_KEY) == expectedId)
-    val actualPhyName = actualMetadata.get(COLUMN_MAPPING_PHYSICAL_NAME_KEY)
-    if (expectedPhyName == "UUID") {
-      assert(actualPhyName.toString.startsWith("col-"))
+  private def assertColumnMappingMetadata(
+      actualMetadata: FieldMetadata, expId: Long, expPhyName: String): Unit = {
+    assert(actualMetadata.get(COLUMN_MAPPING_METADATA_ID_KEY) == expId)
+    val actualPhyName = actualMetadata.get(COLUMN_MAPPING_PHYSICAL_NAME_KEY).toString
+    // For new tables the physical column name is a UUID. For existing tables, we
+    // try to keep the physical column name same as the one in the schema
+    if (expPhyName == "UUID") {
+      assertUUIDColumnName(actualPhyName)
     } else {
-      assert(actualMetadata.get(COLUMN_MAPPING_PHYSICAL_NAME_KEY) == expectedPhyName)
+      assert(actualMetadata.get(COLUMN_MAPPING_PHYSICAL_NAME_KEY) == expPhyName)
     }
   }
+
+  private def assertUUIDColumnName(physicalName: String): Unit =
+    assert(physicalName.toString.startsWith("col-"),
+      s"Physical UUID column name doesn't start with col-: $physicalName")
+
+  private def extractIdsAndPhyNames(
+      schema: StructType): (Map[Seq[String], Long], Map[Seq[String], String]) = {
+    val actIds = mutable.Map[Seq[String], Long]()
+    val actPhyNames = mutable.Map[Seq[String], String]()
+    SchemaMergingUtils.transformColumns(schema)((path, field, _) => {
+      val colPath = path :+ field.getName
+      actIds.put(colPath, field.getMetadata.get(COLUMN_MAPPING_METADATA_ID_KEY).asInstanceOf[Long])
+      actPhyNames.put(colPath, field.getMetadata.get(COLUMN_MAPPING_PHYSICAL_NAME_KEY).toString)
+      field
+    })
+    (actIds.toMap, actPhyNames.toMap)
+  }
+
+  private val simpleSchema = struct(field("a", new IntegerType), field("b", new StringType))
+
+  /** Expected column Id for test schema [[simpleSchema]] */
+  private val simpleSchemaExpIds = Map(Seq("a") -> 1, Seq("b") -> 2)
+
+  /** Expected physical column names for test schema [[simpleSchema]] */
+  private val simpleSchemaExpPhyNames = Map(Seq("a") -> "a", Seq("b") -> "b")
+
+  private val complexSchema = struct(
+    field("i", new IntegerType),
+    field("str", new StringType),
+    field("m", map(new FloatType, new StringType)),
+    field("ms", map(
+      new FloatType,
+      struct(field("msi", new IntegerType), field("msf", new FloatType))
+      )
+    ),
+    field("a", array(new LongType)),
+    field("s",
+          struct(
+            field("sa", new IntegerType),
+            field("ss", struct(field("ssstr", new StringType)))
+            )
+          )
+    )
+
+  /** Expected column Id for test schema [[complexSchema]] */
+  private val complexSchemaExpIds = Map(
+    Seq("i") -> 1,
+    Seq("str") -> 2,
+    Seq("m") -> 3,
+    Seq("ms") -> 4,
+    Seq("ms", "value", "msi") -> 5,
+    Seq("ms", "value", "msf") -> 6,
+    Seq("a") -> 7,
+    Seq("s") -> 8,
+    Seq("s", "sa") -> 9,
+    Seq("s", "ss") -> 10,
+    Seq("s", "ss", "ssstr") -> 11
+  )
+
+  /** Expected physical column names for test schema [[complexSchema]] */
+  private val complexSchemaExpPhyNames = Map(
+    Seq("i") -> "i",
+    Seq("str") -> "str",
+    Seq("m") -> "m",
+    Seq("ms") -> "ms",
+    Seq("ms", "value", "msi") -> "msi",
+    Seq("ms", "value", "msf") -> "msf",
+    Seq("a") -> "a",
+    Seq("s") -> "s",
+    Seq("s", "sa") -> "sa",
+    Seq("s", "ss") -> "ss",
+    Seq("s", "ss", "ssstr") -> "ssstr"
+  )
 }
