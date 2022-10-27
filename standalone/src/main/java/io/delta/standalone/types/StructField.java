@@ -146,4 +146,11 @@ public final class StructField {
     public StructField withNewName(String newName) {
         return new StructField(newName, dataType, nullable, metadata);
     }
+
+    /**
+     * @return Copy of this {@link StructField} with new metadata.
+     */
+    public StructField withNewMetadata(FieldMetadata newMetadata) {
+        return new StructField(name, dataType, nullable, newMetadata);
+    }
 }
