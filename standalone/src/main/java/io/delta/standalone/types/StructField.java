@@ -132,4 +132,18 @@ public final class StructField {
     public int hashCode() {
         return Objects.hash(name, dataType, nullable, metadata);
     }
+
+    /**
+     * @return Copy of this {@link StructField} with a new data type.
+     */
+    public StructField withNewDataType(DataType newDataType) {
+        return new StructField(name, newDataType, nullable, metadata);
+    }
+
+    /**
+     * @return Copy of this {@link StructField} with a new field name.
+     */
+    public StructField withNewName(String newName) {
+        return new StructField(newName, dataType, nullable, metadata);
+    }
 }
