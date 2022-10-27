@@ -248,7 +248,7 @@ private[internal] case class Metadata(
   /** Column mapping max id used so far in this table */
   @JsonIgnore
   lazy val columnMappingMaxId: Long =
-  DeltaConfigs.COLUMN_MAPPING_MAX_ID.fromMetadata(this)
+    DeltaConfigs.COLUMN_MAPPING_MAX_ID.fromMetadata(this)
 
   override def wrap: SingleAction = SingleAction(metaData = this)
 }

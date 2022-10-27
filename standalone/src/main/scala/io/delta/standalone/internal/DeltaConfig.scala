@@ -257,10 +257,7 @@ private[internal] object DeltaConfigs extends Logging {
     DeltaColumnMappingMode(_),
     _ => true,
     "",
-    minimumProtocolVersion = Some(
-      new Protocol(
-        DeltaColumnMapping.MIN_PROTOCOL_VERSION.minReaderVersion,
-        DeltaColumnMapping.MIN_PROTOCOL_VERSION.minWriterVersion)))
+    minimumProtocolVersion = Some(DeltaColumnMapping.MIN_PROTOCOL_VERSION))
 
   /**
    * Maximum columnId used in the schema so far for column mapping. Internal property that cannot
@@ -272,9 +269,6 @@ private[internal] object DeltaConfigs extends Logging {
     _.toLong,
     _ => true,
     "",
-    minimumProtocolVersion = Some(
-      new Protocol(
-        DeltaColumnMapping.MIN_PROTOCOL_VERSION.minReaderVersion,
-        DeltaColumnMapping.MIN_PROTOCOL_VERSION.minWriterVersion)),
+    minimumProtocolVersion = Some(DeltaColumnMapping.MIN_PROTOCOL_VERSION),
     userConfigurable = false)
 }
