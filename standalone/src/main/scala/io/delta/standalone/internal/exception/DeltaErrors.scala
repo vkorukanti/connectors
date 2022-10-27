@@ -16,7 +16,6 @@
 
 package io.delta.standalone.internal.exception
 
-import io.delta.standalone.internal.{DeltaColumnMapping, DeltaConfigs}
 import java.io.{FileNotFoundException, IOException}
 
 import scala.annotation.varargs
@@ -26,6 +25,7 @@ import org.apache.hadoop.fs.Path
 import io.delta.standalone.exceptions.{ColumnMappingUnsupportedException, _}
 import io.delta.standalone.types.{DataType, StructType}
 
+import io.delta.standalone.internal.{DeltaColumnMapping, DeltaConfigs}
 import io.delta.standalone.internal.actions.{CommitInfo, Protocol}
 import io.delta.standalone.internal.util.JsonUtils
 
