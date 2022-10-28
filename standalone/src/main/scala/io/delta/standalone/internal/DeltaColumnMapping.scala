@@ -125,7 +125,10 @@ trait DeltaColumnMappingBase extends Logging {
     }
   }
 
-  /** Check the ids and physical names assigned to the columns are unique. */
+  /**
+   * Verify the ids and physical names assigned to the columns are unique and are valid.
+   * If not throw errors.
+   */
   def checkColumnIdAndPhysicalNameAssignments(
       schema: StructType,
       mode: DeltaColumnMappingMode): Unit = {

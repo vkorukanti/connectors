@@ -250,9 +250,9 @@ class DeltaColumnMappingSuite extends FunSuite {
       assert(field.getMetadata.contains(COLUMN_MAPPING_METADATA_ID_KEY))
       assert(field.getMetadata.contains(PARQUET_FIELD_ID_METADATA_KEY))
 
-      // Make sure the parquet filed id is same as the column mapping id
+      // Make sure the parquet field id is same as the column mapping id
       assert(
-        field.getMetadata.get(PARQUET_FIELD_ID_METADATA_KEY) ===
+        field.getMetadata.get(COLUMN_MAPPING_METADATA_ID_KEY) ===
         field.getMetadata.get(PARQUET_FIELD_ID_METADATA_KEY))
 
       field
