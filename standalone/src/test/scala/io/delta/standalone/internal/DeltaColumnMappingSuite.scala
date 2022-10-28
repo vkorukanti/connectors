@@ -19,13 +19,14 @@ import scala.collection.mutable
 
 import org.scalatest.FunSuite
 
-import io.delta.standalone.exceptions.ColumnMappingUnsupportedException
+import io.delta.standalone.exceptions.{ColumnMappingException, ColumnMappingUnsupportedException}
 import io.delta.standalone.types.{ArrayType, DataType, FieldMetadata, FloatType, IntegerType, LongType, MapType, StringType, StructField, StructType}
 import io.delta.standalone.types.FieldMetadata.builder
 
 import io.delta.standalone.internal.DeltaColumnMapping._
 import io.delta.standalone.internal.actions.{Metadata, Protocol}
 import io.delta.standalone.internal.util.{SchemaMergingUtils, SchemaUtils}
+import io.delta.standalone.internal.util.SchemaMergingUtils.transformColumns
 
 
 class DeltaColumnMappingSuite extends FunSuite {
@@ -167,6 +168,141 @@ class DeltaColumnMappingSuite extends FunSuite {
     assert(updatedMetadata.schema.get("b").getMetadata.getEntries.size() == 3)
   }
 
+  test("verify column mapping metadata") {
+    val updatedMetadata = verifyAndUpdateMetadataChange(
+      oldProtocol = protocol(1, 2),
+      oldMetadata = metadata(complexSchema, Map.empty),
+      newMetadata = metadata(complexSchema,
+                             withProtocol(withMode(Map.empty, "name"), readerV = 2, writerV = 5)),
+      isCreatingNewTable = false)
+
+    checkColumnIdAndPhysicalNameAssignments(updatedMetadata.schema, NameMapping)
+  }
+
+  test("verify column mapping metadata - invalid metadata") {
+    {
+      // Update one of the field to has duplicate id
+      val schemaDuplicateId =
+        transformColumns(schemaWithCMMetadata)((_, field, _) => {
+          if (field.getName.equals("si")) {
+            field.withNewMetadata(
+              FieldMetadata.builder().withMetadata(field.getMetadata)
+                .putLong(COLUMN_MAPPING_METADATA_ID_KEY, 3L).build())
+          } else {
+            field
+          }
+        })
+
+      Seq(IdMapping, NameMapping).foreach(mode => {
+        val ex = intercept[ColumnMappingException] {
+          checkColumnIdAndPhysicalNameAssignments(schemaDuplicateId, mode)
+        }
+        assert(ex.getMessage contains
+          s"Found duplicated column id `3` in column mapping mode `${mode.name}`")
+      })
+    }
+
+    {
+      // Update one of the fields to have a duplicate physical name
+      val schemaDuplicateName =
+        transformColumns(schemaWithCMMetadata)((_, field, _) => {
+          if (field.getName.equals("si")) {
+            field.withNewMetadata(
+              FieldMetadata.builder().withMetadata(field.getMetadata)
+                .putString(COLUMN_MAPPING_PHYSICAL_NAME_KEY, "sf").build())
+          } else {
+            field
+          }
+        })
+
+      Seq(IdMapping, NameMapping).foreach(mode => {
+        val ex = intercept[ColumnMappingException] {
+          checkColumnIdAndPhysicalNameAssignments(schemaDuplicateName, mode)
+        }
+        assert(ex.getMessage contains
+          s"Found duplicated physical name `s.sf` in column mapping mode `${mode.name}`")
+      })
+    }
+  }
+
+  test("create physical schema") {
+    // Reference schema is the schema without any metadata
+    val referenceSchema = schemaWithCMMetadata
+    val logicalSchema = dropColumnMappingMetadata(schemaWithCMMetadata)
+
+    val physicalSchemaName = createPhysicalSchema(
+      logicalSchema, referenceSchema, NameMapping, checkSupportedMode = false)
+
+    // Make sure every field has physical name and no id. Only the physical name is
+    // used to read from or write into parquet files
+    transformColumns(physicalSchemaName)((_, field, _) => {
+      assert(field.getMetadata.contains(COLUMN_MAPPING_PHYSICAL_NAME_KEY))
+      assert(!field.getMetadata.contains(COLUMN_MAPPING_METADATA_ID_KEY))
+      field
+    })
+
+    val physicalSchemaId = createPhysicalSchema(
+      logicalSchema, referenceSchema, IdMapping, checkSupportedMode = false)
+
+    // Make sure every field has the parquet field id. This id is used to read from
+    // or write data into the parquet files.
+    transformColumns(physicalSchemaId)((path, field, _) => {
+      assert(field.getMetadata.contains(COLUMN_MAPPING_METADATA_ID_KEY))
+      assert(field.getMetadata.contains(PARQUET_FIELD_ID_METADATA_KEY))
+
+      // Make sure the parquet field id is same as the column mapping id
+      assert(
+        field.getMetadata.get(COLUMN_MAPPING_METADATA_ID_KEY) ===
+        field.getMetadata.get(PARQUET_FIELD_ID_METADATA_KEY))
+
+      field
+    })
+  }
+
+  test("create physical schema - negative cases") {
+    val referenceSchema = schemaWithCMMetadata
+    val logicalSchema = dropColumnMappingMetadata(schemaWithCMMetadata)
+
+    {
+      // Remove the id for one of the columns
+      val schemaMissingId = SchemaMergingUtils.transformColumns(referenceSchema)((_, field, _) => {
+        if (field.getName.equals("si")) {
+          field.withNewMetadata(
+            FieldMetadata.builder().withMetadata(field.getMetadata)
+                .remove(COLUMN_MAPPING_METADATA_ID_KEY).build())
+        } else {
+          field
+        }
+      })
+
+      val ex = intercept[ColumnMappingException] {
+        createPhysicalSchema(logicalSchema, schemaMissingId, IdMapping, checkSupportedMode = false)
+      }
+      assert(ex.getMessage contains
+        s"Missing column ID in column mapping mode `id` in the field: si")
+    }
+    {
+      // Remove the physical name for one of the columns
+      val schemaMissingId = SchemaMergingUtils.transformColumns(referenceSchema)((_, field, _) => {
+        if (field.getName.equals("si")) {
+          field.withNewMetadata(
+            FieldMetadata.builder().withMetadata(field.getMetadata)
+                .remove(COLUMN_MAPPING_PHYSICAL_NAME_KEY).build())
+        } else {
+          field
+        }
+      })
+
+      Seq(IdMapping, NameMapping).foreach(mode => {
+        val ex = intercept[ColumnMappingException] {
+          createPhysicalSchema(logicalSchema, schemaMissingId, mode, checkSupportedMode = false)
+        }
+        assert(ex.getMessage contains
+          s"Missing physical name in column mapping mode `${mode.name}` in the field: si")
+      })
+    }
+  }
+
   private def struct(fields: StructField *): StructType = new StructType(fields.toArray)
 
   private def map(keyType: DataType, valueType: DataType): MapType =
@@ -200,17 +336,12 @@ class DeltaColumnMappingSuite extends FunSuite {
     newConf.toMap
   }
 
-  private def assertColumnMappingMetadata(
-      actualMetadata: FieldMetadata, expId: Long, expPhyName: String): Unit = {
-    assert(actualMetadata.get(COLUMN_MAPPING_METADATA_ID_KEY) == expId)
-    val actualPhyName = actualMetadata.get(COLUMN_MAPPING_PHYSICAL_NAME_KEY).toString
-    // For new tables the physical column name is a UUID. For existing tables, we
-    // try to keep the physical column name same as the one in the schema
-    if (expPhyName == "UUID") {
-      assertUUIDColumnName(actualPhyName)
-    } else {
-      assert(actualMetadata.get(COLUMN_MAPPING_PHYSICAL_NAME_KEY) == expPhyName)
-    }
+  private def withCMMetdata(field: StructField, id: Int, phyName: String): StructField = {
+    field.withNewMetadata(
+      FieldMetadata.builder().withMetadata(field.getMetadata)
+        .putLong(COLUMN_MAPPING_METADATA_ID_KEY, id)
+        .putString(COLUMN_MAPPING_PHYSICAL_NAME_KEY, phyName)
+        .build())
   }
 
   private def assertUUIDColumnName(physicalName: String): Unit =
@@ -221,7 +352,7 @@ class DeltaColumnMappingSuite extends FunSuite {
       schema: StructType): (Map[Seq[String], Long], Map[Seq[String], String]) = {
     val actIds = mutable.Map[Seq[String], Long]()
     val actPhyNames = mutable.Map[Seq[String], String]()
-    SchemaMergingUtils.transformColumns(schema)((path, field, _) => {
+    transformColumns(schema)((path, field, _) => {
       val colPath = path :+ field.getName
       actIds.put(colPath, field.getMetadata.get(COLUMN_MAPPING_METADATA_ID_KEY).asInstanceOf[Long])
       actPhyNames.put(colPath, field.getMetadata.get(COLUMN_MAPPING_PHYSICAL_NAME_KEY).toString)
@@ -285,4 +416,16 @@ class DeltaColumnMappingSuite extends FunSuite {
     Seq("s", "ss") -> "ss",
     Seq("s", "ss", "ssstr") -> "ssstr"
   )
+
+  private val schemaWithCMMetadata = struct(
+    withCMMetdata(field("a", new IntegerType), id = 1, phyName = "a"),
+    withCMMetdata(field("b", new StringType), id = 2, phyName = "b"),
+    withCMMetdata(
+      field("s",
+            struct(
+              withCMMetdata(field("si", new IntegerType), id = 4, phyName = "si"),
+              withCMMetdata(field("sf", new FloatType), id = 5, phyName = "sf"))),
+      id = 3,
+      phyName = "s")
+    )
 }

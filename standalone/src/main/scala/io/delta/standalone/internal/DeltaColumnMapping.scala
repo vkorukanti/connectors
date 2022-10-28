@@ -18,6 +18,8 @@ package io.delta.standalone.internal
 
 import java.util.{Locale, UUID}
 
+import scala.collection.mutable
+
 import io.delta.standalone.types.{FieldMetadata, StructField, StructType}
 
 import io.delta.standalone.internal.actions.{Metadata, Protocol}
@@ -47,6 +49,25 @@ trait DeltaColumnMappingBase extends Logging {
   val COLUMN_MAPPING_PHYSICAL_NAME_KEY = COLUMN_MAPPING_METADATA_PREFIX + "physicalName"
 
   private val supportedModes: Set[DeltaColumnMappingMode] = Set(NoMapping, NameMapping)
+
+  /**
+   * This list of internal columns (and only this list) is allowed to have missing
+   * column mapping metadata such as field id and physical name because
+   * they might not be present in user's table schema.
+   *
+   * These fields, if materialized to parquet, will always be matched by their display name in the
+   * downstream parquet reader even under column mapping modes.
+   *
+   * For future developers who want to utilize additional internal columns without generating
+   * column mapping metadata, please add them here.
+   *
+   * This list is case-insensitive.
+   */
+  protected val DELTA_INTERNAL_COLUMNS: Set[String] = Seq(
+    "__is_cdc",
+    "_change_type",
+    "_commit_version",
+    "_commit_timestamp").map(_.toLowerCase(Locale.ROOT)).toSet
 
   /**
    * Update the metadata based on valid column mapping transition. If the column mapping
@@ -101,6 +122,99 @@ trait DeltaColumnMappingBase extends Logging {
         newMetadata
       case mode =>
         throw unsupportedColumnMappingMode(mode.name)
+    }
+  }
+
+  /**
+   * Verify the ids and physical names assigned to the columns are unique and are valid.
+   * If not throw errors.
+   */
+  def checkColumnIdAndPhysicalNameAssignments(
+      schema: StructType,
+      mode: DeltaColumnMappingMode): Unit = {
+    // physical name/column id -> full field path
+    val columnIds = mutable.Set[Int]()
+    val physicalNames = mutable.Set[String]()
+
+    // use id mapping to keep all column mapping metadata
+    // this method checks for missing physical name & column id already
+    val physicalSchema = createPhysicalSchema(schema, schema, IdMapping, checkSupportedMode = false)
+
+    SchemaMergingUtils.transformColumns(physicalSchema) ((parentPhysicalPath, field, _) => {
+      // field.name is now physical name
+      // We also need to apply backticks to column paths with dots in them to prevent a possible
+      // false alarm in which a column `a.b` is duplicated with `a`.`b`
+      val curFullPhysicalPath = SchemaUtils.prettyFieldName(parentPhysicalPath :+ field.getName)
+      val columnId = getColumnId(field)
+      if (columnIds.contains(columnId)) {
+        throw DeltaErrors.duplicatedColumnId(mode, columnId, schema)
+      }
+      columnIds.add(columnId)
+
+      // We should check duplication by full physical name path, because nested fields
+      // such as `a.b.c` shouldn't conflict with `x.y.c` due to same column name.
+      if (physicalNames.contains(curFullPhysicalPath)) {
+        throw DeltaErrors.duplicatedPhysicalName(mode, curFullPhysicalPath, schema)
+      }
+      physicalNames.add(curFullPhysicalPath)
+
+      field
+    })
+  }
+
+  /**
+   * Create a physical schema for the given schema using the Delta table schema as a reference.
+   * Physical schema is used when reading data from or writing data into parquet files.
+   *
+   * @param schema the given logical schema (potentially without any metadata)
+   * @param referenceSchema the schema from the delta log, which has all the metadata
+   * @param columnMappingMode column mapping mode of the delta table, which determines which
+   *                          metadata to fill in
+   * @param checkSupportedMode whether we should check of the column mapping mode is supported
+   */
+  def createPhysicalSchema(
+      schema: StructType,
+      referenceSchema: StructType,
+      columnMappingMode: DeltaColumnMappingMode,
+      checkSupportedMode: Boolean = true): StructType = {
+    if (columnMappingMode == NoMapping) {
+      return schema
+    }
+
+    // createPhysicalSchema is the narrow-waist for both read/write code path
+    // so we could check for mode support here
+    if (checkSupportedMode && !supportedModes.contains(columnMappingMode)) {
+      throw DeltaErrors.unsupportedColumnMappingMode(columnMappingMode.name)
+    }
+
+    SchemaMergingUtils.transformColumns(schema) { (path, field, _) =>
+      val fullName = path :+ field.getName
+      val inSchema = SchemaUtils
+        .findNestedFieldIgnoreCase(referenceSchema, fullName)
+      inSchema.map { refField =>
+        val physicalMetadata = getColumnMappingMetadata(refField, columnMappingMode)
+        field.withNewName(getPhysicalName(refField))
+          .withNewMetadata(physicalMetadata)
+      }.getOrElse {
+        if (isInternalField(field)) {
+          field
+        } else {
+          throw DeltaErrors.columnNotFound(fullName, referenceSchema)
+        }
+      }
+    }
+  }
+
+  def dropColumnMappingMetadata(schema: StructType): StructType = {
+    SchemaMergingUtils.transformColumns(schema) { (_, field, _) =>
+      field.withNewMetadata(
+        FieldMetadata.builder()
+          .withMetadata(field.getMetadata)
+          .remove(COLUMN_MAPPING_METADATA_ID_KEY)
+          .remove(COLUMN_MAPPING_PHYSICAL_NAME_KEY)
+          .remove(PARQUET_FIELD_ID_METADATA_KEY)
+          .build()
+        )
     }
   }
 
@@ -160,6 +274,57 @@ trait DeltaColumnMappingBase extends Logging {
   }
 
   /**
+   * Gets the required column metadata for each column based on the column mapping mode.
+   */
+  private def getColumnMappingMetadata(
+      field: StructField, mode: DeltaColumnMappingMode): FieldMetadata = {
+    mode match {
+      case NoMapping =>
+        // drop all column mapping related fields
+        FieldMetadata.builder()
+            .withMetadata(field.getMetadata)
+            .remove(COLUMN_MAPPING_METADATA_ID_KEY)
+            .remove(PARQUET_FIELD_ID_METADATA_KEY)
+            .remove(COLUMN_MAPPING_PHYSICAL_NAME_KEY)
+            .build()
+
+      case IdMapping =>
+        if (!hasColumnId(field)) {
+          throw DeltaErrors.missingColumnId(IdMapping, field.getName)
+        }
+        if (!hasPhysicalName(field)) {
+          throw DeltaErrors.missingPhysicalName(IdMapping, field.getName)
+        }
+        FieldMetadata.builder()
+            .withMetadata(field.getMetadata)
+            .putLong(PARQUET_FIELD_ID_METADATA_KEY, getColumnId(field))
+            .build()
+
+      case NameMapping =>
+        if (!hasPhysicalName(field)) {
+          throw DeltaErrors.missingPhysicalName(NameMapping, field.getName)
+        }
+        FieldMetadata.builder()
+            .withMetadata(field.getMetadata)
+            .remove(COLUMN_MAPPING_METADATA_ID_KEY)
+            .remove(PARQUET_FIELD_ID_METADATA_KEY)
+            .build()
+
+      case mode =>
+        throw DeltaErrors.unsupportedColumnMappingMode(mode.name)
+    }
+  }
+
+  /** Get the physical name of the column. If no physical name defined, return the logical name */
+  def getPhysicalName(field: StructField): String = {
+    if (field.getMetadata.contains(COLUMN_MAPPING_PHYSICAL_NAME_KEY)) {
+      field.getMetadata.get(COLUMN_MAPPING_PHYSICAL_NAME_KEY).toString
+    } else {
+      field.getName
+    }
+  }
+
+  /**
    * The only allowed mode change is from NoMapping to NameMapping. Other changes
    * would require re-writing Parquet files and are not supported right now.
    */
@@ -192,6 +357,9 @@ trait DeltaColumnMappingBase extends Logging {
 
   private def hasPhysicalName(field: StructField): Boolean =
     field.getMetadata().contains(COLUMN_MAPPING_PHYSICAL_NAME_KEY)
+
+  def isInternalField(field: StructField): Boolean = DELTA_INTERNAL_COLUMNS
+      .contains(field.getName.toLowerCase(Locale.ROOT))
 
   private def generatePhysicalName: String = "col-" + UUID.randomUUID()
 }
