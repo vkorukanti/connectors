@@ -22,12 +22,12 @@ import scala.annotation.varargs
 
 import org.apache.hadoop.fs.Path
 
-import io.delta.standalone.exceptions.{ColumnMappingUnsupportedException, _}
+import io.delta.standalone.exceptions._
 import io.delta.standalone.types.{DataType, StructType}
 
-import io.delta.standalone.internal.{DeltaColumnMapping, DeltaConfigs}
+import io.delta.standalone.internal.{DeltaColumnMapping, DeltaColumnMappingMode, DeltaConfigs}
 import io.delta.standalone.internal.actions.{CommitInfo, Protocol}
-import io.delta.standalone.internal.util.JsonUtils
+import io.delta.standalone.internal.util.{JsonUtils, SchemaUtils}
 
 /** A holder object for Delta errors. */
 private[internal] object DeltaErrors {
@@ -399,6 +399,35 @@ private[internal] object DeltaErrors {
       s"old schema: ${oldSchema.getTreeString}\n" +
       s"new schema: ${newSchema.getTreeString}\n" +
       "Schema changes are not allowed during the change of column mapping mode.")
+  }
+
+  def missingColumnId(mode: DeltaColumnMappingMode, field: String): Throwable = {
+    new ColumnMappingException(s"Missing column ID in column mapping mode `${mode.name}`" +
+      s" in the field: $field")
+  }
+
+  def missingPhysicalName(mode: DeltaColumnMappingMode, field: String): Throwable =
+    new ColumnMappingException(s"Missing physical name in column mapping mode `${mode.name}`" +
+      s" in the field: $field")
+
+  def duplicatedColumnId(mode: DeltaColumnMappingMode, id: Long, schema: StructType): Throwable = {
+    new ColumnMappingException(
+      s"Found duplicated column id `$id` in column mapping mode `${mode.name}` \n\t" +
+      s"schema: \n ${schema.toPrettyJson}")
+  }
+
+  def duplicatedPhysicalName(
+      mode: DeltaColumnMappingMode,
+      physicalName: String,
+      schema: StructType): Throwable = {
+    new ColumnMappingException(
+      s"Found duplicated physical name `$physicalName` in column mapping mode `${mode.name}` \n\t" +
+      s"schema: \n ${schema.toPrettyJson}")
+  }
+
+  def columnNotFound(path: Seq[String], schema: StructType): Throwable = {
+    new IllegalArgumentException("Can't resolve column " +
+      s"${SchemaUtils.prettyFieldName(path)} in ${schema.toPrettyJson}")
   }
 
   ///////////////////////////////////////////////////////////////////////////

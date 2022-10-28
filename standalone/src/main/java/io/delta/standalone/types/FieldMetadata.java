@@ -189,6 +189,11 @@ public final class FieldMetadata {
             return this;
         }
 
+        public Builder remove(String key) {
+            metadata.remove(key);
+            return this;
+        }
+
         /**
          * @return a new {@link FieldMetadata} with the mappings added to the builder
          */
