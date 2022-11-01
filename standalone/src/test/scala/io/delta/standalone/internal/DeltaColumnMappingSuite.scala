@@ -309,7 +309,7 @@ class DeltaColumnMappingSuite extends FunSuite {
 
   test("Upgrade to column mapping mode 'name' on the table") {
     withTempDir { dir =>
-      var log = DeltaLog.forTable(new Configuration(), dir.getCanonicalPath)
+      var log = getDeltaLogWithMaxFeatureSupport(new Configuration(), dir.getCanonicalPath)
       var txn = log.startTransaction()
       val addFile = AddFile("/absolute/path/to/file/test.parquet", Map(), 0, 0, true)
 
@@ -320,7 +320,7 @@ class DeltaColumnMappingSuite extends FunSuite {
       txn.updateMetadata(metadataJ(simpleSchema, withMode(Map.empty, "name")))
       txn.commit( addFile :: Nil, OP, "test")
 
-      log = DeltaLog.forTable(new Configuration(), dir.getCanonicalPath)
+      log = getDeltaLogWithMaxFeatureSupport(new Configuration(), dir.getCanonicalPath)
       txn = log.startTransaction()
 
       val oldMetadata = txn.metadata()
@@ -334,14 +334,14 @@ class DeltaColumnMappingSuite extends FunSuite {
       txn.updateMetadata(newMetadata)
       txn.commit(Seq.empty, OP, "test")
 
-      log = DeltaLog.forTable(new Configuration(), dir.getCanonicalPath)
+      log = getDeltaLogWithMaxFeatureSupport(new Configuration(), dir.getCanonicalPath)
       txn = log.startTransaction()
 
       val updatedSchema = txn.metadata().getSchema();
 
       val (actIds, actPhyNames) = extractIdsAndPhyNames(updatedSchema)
       assert(actIds === simpleSchemaExpIds)
-      assert(actPhyNames === simpleSchemaExpPhyNames)
+      actPhyNames.values.foreach(assertUUIDColumnName(_))
     }
   }
 

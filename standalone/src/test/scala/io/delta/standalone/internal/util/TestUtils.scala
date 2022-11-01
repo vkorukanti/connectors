@@ -26,6 +26,7 @@ import org.apache.commons.io.FileUtils
 import org.apache.hadoop.conf.Configuration
 import org.scalatest.Matchers.intercept
 
+import io.delta.standalone.DeltaLog
 import io.delta.standalone.actions.{Action => ActionJ, AddFile => AddFileJ}
 
 import io.delta.standalone.internal.DeltaLogImpl
@@ -62,7 +63,7 @@ object TestUtils {
    * Get a DeltaLog instance with the connector's supported protocol set to Standalone's supported
    * protocol.
    */
-  def getDeltaLogWithMaxFeatureSupport(conf: Configuration, path: String) : DeltaLogImpl = {
+  def getDeltaLogWithMaxFeatureSupport(conf: Configuration, path: String) : DeltaLog = {
     DeltaLogImpl.forTable(conf, path,
       Action.maxSupportedReaderVersion, Action.maxSupportedWriterVersion)
   }
