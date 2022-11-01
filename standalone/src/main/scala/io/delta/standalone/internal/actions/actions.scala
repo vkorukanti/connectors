@@ -26,7 +26,7 @@ import com.fasterxml.jackson.databind.annotation.{JsonDeserialize, JsonSerialize
 
 import io.delta.standalone.types.StructType
 
-import io.delta.standalone.internal.{DeltaColumnMappingMode, DeltaConfigs}
+import io.delta.standalone.internal.{DeltaColumnMapping, DeltaColumnMappingMode, DeltaConfigs, IdMapping, NameMapping}
 import io.delta.standalone.internal.exception.DeltaErrors
 import io.delta.standalone.internal.util.{DataTypeParser, JsonUtils}
 
@@ -106,7 +106,14 @@ private[internal] object Protocol {
     // check config
 
     // Column mapping
-    // check column mapping mode
+    metadata.columnMappingMode match {
+      case NameMapping | IdMapping =>
+        if (protocol.minWriterVersion < DeltaColumnMapping.MIN_WRITER_VERSION ||
+          protocol.minReaderVersion < DeltaColumnMapping.MIN_READER_VERSION) {
+          throw DeltaErrors.changeColumnMappingModeOnOldProtocol(protocol)
+        }
+      case _ =>
+    }
 
     // todo: Should we check for any unsupported features? i.e. identity columns
   }

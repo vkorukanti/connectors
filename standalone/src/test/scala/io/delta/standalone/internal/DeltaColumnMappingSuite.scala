@@ -17,16 +17,20 @@ package io.delta.standalone.internal
 
 import scala.collection.mutable
 
+import org.apache.hadoop.conf.Configuration
 import org.scalatest.FunSuite
 
+import io.delta.standalone.{DeltaLog, Operation}
+import io.delta.standalone.actions.{Metadata => MetadataJ}
 import io.delta.standalone.exceptions.{ColumnMappingException, ColumnMappingUnsupportedException}
 import io.delta.standalone.types.{ArrayType, DataType, FieldMetadata, FloatType, IntegerType, LongType, MapType, StringType, StructField, StructType}
 import io.delta.standalone.types.FieldMetadata.builder
 
 import io.delta.standalone.internal.DeltaColumnMapping._
-import io.delta.standalone.internal.actions.{Metadata, Protocol}
-import io.delta.standalone.internal.util.{SchemaMergingUtils, SchemaUtils}
+import io.delta.standalone.internal.actions.{AddFile, Metadata, Protocol}
+import io.delta.standalone.internal.util.{ConversionUtils, SchemaMergingUtils, SchemaUtils}
 import io.delta.standalone.internal.util.SchemaMergingUtils.transformColumns
+import io.delta.standalone.internal.util.TestUtils._
 
 
 class DeltaColumnMappingSuite extends FunSuite {
@@ -303,6 +307,44 @@ class DeltaColumnMappingSuite extends FunSuite {
     }
   }
 
+  test("Upgrade to column mapping mode 'name' on the table") {
+    withTempDir { dir =>
+      var log = DeltaLog.forTable(new Configuration(), dir.getCanonicalPath)
+      var txn = log.startTransaction()
+      val addFile = AddFile("/absolute/path/to/file/test.parquet", Map(), 0, 0, true)
+
+      // TODO: until a public API is available, change protocol directly on the txn impl
+      txn.asInstanceOf[OptimisticTransactionImpl]
+          .upgradeProtocolVersion(MIN_READER_VERSION, MIN_WRITER_VERSION)
+
+      txn.updateMetadata(metadataJ(simpleSchema, withMode(Map.empty, "name")))
+      txn.commit( addFile :: Nil, OP, "test")
+
+      log = DeltaLog.forTable(new Configuration(), dir.getCanonicalPath)
+      txn = log.startTransaction()
+
+      val oldMetadata = txn.metadata()
+      val newConfig = new java.util.HashMap[String, String]()
+      newConfig.putAll(oldMetadata.getConfiguration)
+
+      // Add column mapping related configs
+      newConfig.put("delta.columnMapping.mode", "name")
+
+      val newMetadata = oldMetadata.copyBuilder().configuration(newConfig).build()
+      txn.updateMetadata(newMetadata)
+      txn.commit(Seq.empty, OP, "test")
+
+      log = DeltaLog.forTable(new Configuration(), dir.getCanonicalPath)
+      txn = log.startTransaction()
+
+      val updatedSchema = txn.metadata().getSchema();
+
+      val (actIds, actPhyNames) = extractIdsAndPhyNames(updatedSchema)
+      assert(actIds === simpleSchemaExpIds)
+      assert(actPhyNames === simpleSchemaExpPhyNames)
+    }
+  }
+
   private def struct(fields: StructField *): StructType = new StructType(fields.toArray)
 
   private def map(keyType: DataType, valueType: DataType): MapType =
@@ -318,6 +360,9 @@ class DeltaColumnMappingSuite extends FunSuite {
       configuration = conf
     )
   }
+
+  private def metadataJ(schema: StructType, conf: Map[String, String]): MetadataJ =
+    ConversionUtils.convertMetadata(metadata(schema, conf))
 
   private def protocol(readerVersion: Int, writerVersion: Int): Protocol =
     new Protocol(readerVersion, writerVersion)
@@ -428,4 +473,6 @@ class DeltaColumnMappingSuite extends FunSuite {
       id = 3,
       phyName = "s")
     )
+
+  private val OP = new Operation(Operation.Name.MANUAL_UPDATE)
 }
