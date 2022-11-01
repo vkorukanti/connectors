@@ -19,6 +19,7 @@ package io.delta.standalone.actions;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -27,9 +28,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import io.delta.standalone.Constraint;
+import io.delta.standalone.exceptions.ColumnMappingUnsupportedException;
 import io.delta.standalone.types.StructType;
 
 import io.delta.standalone.internal.ConstraintImpl;
+import io.delta.standalone.internal.DeltaConfigs;
 import io.delta.standalone.internal.exception.DeltaErrors;
 
 /**
@@ -187,6 +190,25 @@ public final class Metadata implements Action {
         Map<String, String> newConfiguration = new HashMap(configuration);
         newConfiguration.remove(fullKey);
         return copyBuilder().configuration(newConfiguration).build();
+    }
+
+    /**
+     * Returns a copy of this {@link Metadata} instance with the given column mapping mode.
+     * Any validation of the given column mapping mode happens when this new metadata is
+     * applied on the table.
+     *
+     * @param mode Column mapping mode. One of the ("none", "id", "none")
+     * @return A copy of this metadata object with the given column mapping mode.
+     * @throws ColumnMappingUnsupportedException if the given mode is not supported.
+     */
+    public Metadata withColumnMappingMode(String mode) throws ColumnMappingUnsupportedException {
+        Map<String, String> newConfiguration = new HashMap(configuration);
+        mode = mode.toLowerCase(Locale.ROOT);
+        if ("name".equals(mode) || "id".equals(mode) || "none".equals(mode)) {
+            newConfiguration.put(DeltaConfigs.COLUMN_MAPPING_MODE().key(), mode);
+            return copyBuilder().configuration(newConfiguration).build();
+        }
+        throw DeltaErrors.unsupportedColumnMappingMode(mode);
     }
 
     @Override
