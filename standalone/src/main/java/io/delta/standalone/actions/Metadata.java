@@ -27,6 +27,9 @@ import javax.annotation.Nullable;
 
 import io.delta.standalone.types.StructType;
 
+import io.delta.standalone.internal.DeltaColumnMapping;
+import io.delta.standalone.internal.DeltaColumnMappingMode;
+
 /**
  * Updates the metadata of the table. The first version of a table must contain
  * a {@link Metadata} action. Subsequent {@link Metadata} actions completely
@@ -131,6 +134,17 @@ public final class Metadata implements Action {
     @Nullable
     public StructType getSchema() {
         return schema;
+    }
+
+    /**
+     * @return the physical schema used to read or write data in table data files such as Parquet.
+     */
+    public StructType getPhysicalSchema() {
+        return DeltaColumnMapping.createPhysicalSchema(
+                schema,
+                schema,
+                DeltaColumnMappingMode.apply(getConfiguration().get("delta.columnMapping.mode")),
+                false /* checkSupportedMode */);
     }
 
     @Override

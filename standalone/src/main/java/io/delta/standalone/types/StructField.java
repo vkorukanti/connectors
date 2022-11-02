@@ -39,6 +39,9 @@
 package io.delta.standalone.types;
 
 import java.util.Objects;
+import java.util.Optional;
+
+import io.delta.standalone.internal.DeltaColumnMapping;
 
 /**
  * A field inside a {@link StructType}.
@@ -107,6 +110,26 @@ public final class StructField {
      */
     public FieldMetadata getMetadata() {
         return metadata;
+    }
+
+    /**
+     * @return if exists, the physical column name used to refer the column
+     *         in underlying table data files
+     */
+    public Optional<String> getPhysicalName() {
+        return Optional.ofNullable(
+                        metadata.get(DeltaColumnMapping.COLUMN_MAPPING_PHYSICAL_NAME_KEY()))
+                .map(Object::toString);
+    }
+
+    /**
+     * @return if exists, the physical column id used to refer the column
+     *         in underlying table data files.
+     */
+    public Optional<String> getPhysicalId() {
+        return Optional.ofNullable(
+                        metadata.get(DeltaColumnMapping.COLUMN_MAPPING_METADATA_ID_KEY()))
+                .map(Object::toString);
     }
 
     /**
