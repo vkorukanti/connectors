@@ -26,7 +26,7 @@ import com.fasterxml.jackson.databind.annotation.{JsonDeserialize, JsonSerialize
 
 import io.delta.standalone.types.StructType
 
-import io.delta.standalone.internal.{DeltaColumnMappingMode, DeltaConfigs}
+import io.delta.standalone.internal.{DeltaColumnMappingMode, DeltaConfigs, GeneratedColumn}
 import io.delta.standalone.internal.exception.DeltaErrors
 import io.delta.standalone.internal.util.{DataTypeParser, JsonUtils}
 
@@ -101,6 +101,9 @@ private[internal] object Protocol {
     // Check constraints
 
     // Generated columns
+    if (GeneratedColumn.hasGeneratedColumns(metadata.schema)) {
+      GeneratedColumn.satisfyGeneratedColumnProtocol(protocol)
+    }
 
     // CDF
     // check config

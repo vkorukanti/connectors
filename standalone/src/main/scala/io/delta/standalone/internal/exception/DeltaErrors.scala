@@ -430,6 +430,11 @@ private[internal] object DeltaErrors {
       s"${SchemaUtils.prettyFieldName(path)} in ${schema.toPrettyJson}")
   }
 
+  def generatedColumnOnlyOnTopLevelColumns(path: Seq[String]): Throwable = {
+    new UnsupportedOperationException("Generated expressions are only supported on top level " +
+      s"columns in a table. Found a non-top level column with generation expression: $path")
+  }
+
   ///////////////////////////////////////////////////////////////////////////
   // Helper Methods
   ///////////////////////////////////////////////////////////////////////////

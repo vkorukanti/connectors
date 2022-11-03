@@ -489,6 +489,10 @@ private[internal] class OptimisticTransactionImpl(
       case e: DeltaStandaloneException => throw DeltaErrors.invalidPartitionColumn(e)
     }
 
+    if (GeneratedColumn.hasGeneratedColumns(metadata.schema)) {
+      GeneratedColumn.verifyGeneratedColumns(metadata.schema)
+    }
+
     Protocol.checkMetadataProtocolProperties(metadata, protocol)
     Protocol.checkMetadataFeatureProtocolCompatibility(metadata, protocol)
   }
