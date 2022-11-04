@@ -17,6 +17,7 @@
 package io.delta.standalone.actions;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -25,7 +26,11 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import io.delta.standalone.Constraint;
 import io.delta.standalone.types.StructType;
+
+import io.delta.standalone.internal.ConstraintImpl;
+import io.delta.standalone.internal.exception.DeltaErrors;
 
 /**
  * Updates the metadata of the table. The first version of a table must contain
@@ -131,6 +136,57 @@ public final class Metadata implements Action {
     @Nullable
     public StructType getSchema() {
         return schema;
+    }
+
+    /**
+     * @return the CHECK constraints and column invariants defined in this metadata
+     */
+    public List<Constraint> getConstraints() {
+        return Collections.unmodifiableList(ConstraintImpl.getConstraints(this));
+    }
+
+    /**
+     * Returns a new {@link Metadata} instance with the same properties as this instance but with
+     * the specified check constraint added to this instance's {@code configuration}. The check
+     * constraint will be added as the key-value pair ("delta.constraints.{name}", "{expression}").
+     * A check constraint's {@code expression} must be enforced for each input row when writing data
+     * and all for existing rows.
+     *
+     * @param name  the case-insensitive name of the check constraint (without the
+     *              "delta.constraints" prefix)
+     * @param expression  the condition to enforce as a SQL string
+     * @return a new {@link Metadata} instance with the same properties as this instance but with
+     *         the added check constraint
+     * @throws IllegalArgumentException if a constraint with name already exists
+     */
+    public Metadata withCheckConstraint(String name, String expression) throws Throwable {
+        String fullKey = ConstraintImpl.getCheckConstraintKey(name);
+        if (configuration.containsKey(fullKey)) {
+            throw DeltaErrors.checkConstraintAlreadyExists(name, configuration.get(fullKey));
+        }
+        Map<String, String> newConfiguration = new HashMap(configuration);
+        newConfiguration.put(fullKey, expression);
+        return copyBuilder().configuration(newConfiguration).build();
+    }
+
+    /**
+     * Returns a new {@link Metadata} instance with the same properties as this instance but with
+     * the specified check constraint removed from this instance's {@code configuration}
+     *
+     * @param name  the case-insensitive name of the check constraint to remove (without the
+     *              "delta.constraints" prefix)
+     * @return a new {@link Metadata} instance with the same properties as this instance but with
+     *         the specified check constraint removed
+     * @throws IllegalArgumentException if a constraint with name does not exist
+     */
+    public Metadata withoutCheckConstraint(String name) throws Throwable {
+        final String fullKey = ConstraintImpl.getCheckConstraintKey(name);
+        if (!configuration.containsKey(fullKey)) {
+            throw DeltaErrors.checkConstraintDoesNotExist(name);
+        }
+        Map<String, String> newConfiguration = new HashMap(configuration);
+        newConfiguration.remove(fullKey);
+        return copyBuilder().configuration(newConfiguration).build();
     }
 
     @Override

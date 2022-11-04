@@ -26,7 +26,7 @@ import com.fasterxml.jackson.databind.annotation.{JsonDeserialize, JsonSerialize
 
 import io.delta.standalone.types.StructType
 
-import io.delta.standalone.internal.{DeltaColumnMappingMode, DeltaConfigs}
+import io.delta.standalone.internal.{ConstraintImpl, DeltaColumnMappingMode, DeltaConfigs}
 import io.delta.standalone.internal.exception.DeltaErrors
 import io.delta.standalone.internal.util.{DataTypeParser, JsonUtils}
 
@@ -72,6 +72,10 @@ private[internal] case class Protocol(
 
   @JsonIgnore
   def simpleString: String = s"($minReaderVersion,$minWriterVersion)"
+
+  @JsonIgnore
+  def detailedString: String =
+    s"(minReaderVersion = $minReaderVersion, minWriterVersion = $minWriterVersion)"
 }
 
 private[internal] object Protocol {
@@ -87,18 +91,33 @@ private[internal] object Protocol {
 
   /** Check that the protocol is compatible with any features enabled in the table metadata */
   def checkMetadataFeatureProtocolCompatibility(metadata: Metadata, protocol: Protocol): Unit = {
+
+    def insufficientProtocol(requiredProtocol: Protocol): Boolean = {
+      protocol.minWriterVersion < requiredProtocol.minWriterVersion ||
+        protocol.minReaderVersion < requiredProtocol.minReaderVersion
+    }
+
     // look at Protocol.requiredMinimumProtocol in Delta
 
     // Column invariants
     // check for invariants in the schema
 
     // Append-only
-    if (DeltaConfigs.IS_APPEND_ONLY.fromMetadata(metadata) && protocol.minWriterVersion < 2) {
+    val appendOnlyMinProtocol = Protocol(0, 2)
+    if (DeltaConfigs.IS_APPEND_ONLY.fromMetadata(metadata) &&
+      insufficientProtocol(appendOnlyMinProtocol)) {
       // todo: when we add the feature enums we can use their string here (and all below)
-      throw DeltaErrors.insufficientWriterVersion(protocol, 2, "appendOnly")
+      throw DeltaErrors.insufficientTableProtocolVersion(protocol,
+        appendOnlyMinProtocol, "appendOnly")
     }
 
     // Check constraints
+    val checkConstraintsMinProtocol = Protocol(0, 3)
+    if (ConstraintImpl.getCheckConstraints(metadata.configuration).nonEmpty &&
+      insufficientProtocol(checkConstraintsMinProtocol)) {
+      throw DeltaErrors.insufficientTableProtocolVersion(protocol,
+        checkConstraintsMinProtocol, "checkConstraint")
+    }
 
     // Generated columns
 
