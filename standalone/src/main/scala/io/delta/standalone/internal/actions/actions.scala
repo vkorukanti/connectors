@@ -125,6 +125,9 @@ private[internal] object Protocol {
     // check config
 
     // Column mapping
+    // The check is actually done as part of `OptimisticTransactionImpl.updateMetadata`
+    // when updating the metadata for column mapping mode. Added the check here for
+    // completeness of all protocol checks in this method.
     metadata.columnMappingMode match {
       case NameMapping | IdMapping =>
         if (protocol.minWriterVersion < DeltaColumnMapping.MIN_WRITER_VERSION ||
