@@ -464,7 +464,10 @@ class DeltaColumnMappingSuite extends FunSuite {
       s"Physical UUID column name doesn't start with col-: $physicalName")
 
   private def assertMode(metadata: MetadataJ, expectedMode: String): Unit = {
+    // Fetch it through the config property and verify
     assert(metadata.getConfiguration.get("delta.columnMapping.mode") == expectedMode)
+    // Fetch it through the API on [[Metadata]] and verify
+    assert(metadata.getColumnMappingMode == expectedMode)
   }
 
   private def assertMode(metadata: Metadata, expectedMode: String): Unit = {
