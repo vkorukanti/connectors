@@ -17,16 +17,20 @@ package io.delta.standalone.internal
 
 import scala.collection.mutable
 
+import org.apache.hadoop.conf.Configuration
 import org.scalatest.FunSuite
 
+import io.delta.standalone.{Operation, OptimisticTransaction}
+import io.delta.standalone.actions.{Metadata => MetadataJ}
 import io.delta.standalone.exceptions.{ColumnMappingException, ColumnMappingUnsupportedException}
 import io.delta.standalone.types.{ArrayType, DataType, FieldMetadata, FloatType, IntegerType, LongType, MapType, StringType, StructField, StructType}
 import io.delta.standalone.types.FieldMetadata.builder
 
 import io.delta.standalone.internal.DeltaColumnMapping._
 import io.delta.standalone.internal.actions.{Metadata, Protocol}
-import io.delta.standalone.internal.util.{SchemaMergingUtils, SchemaUtils}
+import io.delta.standalone.internal.util.{ConversionUtils, SchemaMergingUtils}
 import io.delta.standalone.internal.util.SchemaMergingUtils.transformColumns
+import io.delta.standalone.internal.util.TestUtils._
 
 
 class DeltaColumnMappingSuite extends FunSuite {
@@ -303,6 +307,90 @@ class DeltaColumnMappingSuite extends FunSuite {
     }
   }
 
+  test("Upgrade to column mapping mode 'name' on the table") {
+    withTempDir { dir =>
+
+      // Create a table and initiate a transaction
+      var txn = getTxnWithMaxFeatureSupport(dir.getCanonicalPath)
+
+      // Upgrade the table protocol version to a version that supports column mapping
+      // TODO: until a public API is available, change protocol directly on the txn impl
+      txn.asInstanceOf[OptimisticTransactionImpl].upgradeProtocolVersion(
+        DeltaColumnMapping.MIN_READER_VERSION,
+        DeltaColumnMapping.MIN_WRITER_VERSION)
+
+      // Update table with initial schema
+      txn.updateMetadata(metadataJ(complexSchema, Map.empty))
+      txn.commit(Seq.empty, OP, "test")
+
+      // Upgrade the column mapping mode in the table
+      txn = getTxnWithMaxFeatureSupport(dir.getCanonicalPath)
+      txn.updateMetadata(txn.metadata().withColumnMappingMode("name"))
+      txn.commit(Seq.empty, OP, "test")
+
+      // Verify the columns have column mapping physical name and id assigned
+      txn = getTxnWithMaxFeatureSupport(dir.getCanonicalPath)
+      val updatedSchema = txn.metadata().getSchema();
+
+      val (actIds, actPhyNames) = extractIdsAndPhyNames(updatedSchema)
+      assert(actIds === complexSchemaExpIds)
+      assert(actPhyNames === complexSchemaExpPhyNames)
+    }
+  }
+
+  test("Create a new table with column mapping mode 'name'") {
+    withTempDir { dir =>
+      // Create a table and initiate a transaction
+      var txn = getTxnWithMaxFeatureSupport(dir.getCanonicalPath)
+
+      // Upgrade the table protocol version to a version that supports column mapping
+      // TODO: until a public API is available, change protocol directly on the txn impl
+      txn.asInstanceOf[OptimisticTransactionImpl].upgradeProtocolVersion(
+        DeltaColumnMapping.MIN_READER_VERSION,
+        DeltaColumnMapping.MIN_WRITER_VERSION)
+
+      // Update table with initial schema and column mapping mode
+      txn.updateMetadata(metadataJ(complexSchema, withMode(Map.empty, "name")))
+      txn.commit(Seq.empty, OP, "test")
+
+      // Verify the columns have column mapping physical name and id assigned
+      txn = getTxnWithMaxFeatureSupport(dir.getCanonicalPath)
+      val schema = txn.metadata().getSchema();
+
+      val (actIds, actPhyNames) = extractIdsAndPhyNames(schema)
+      assert(actIds === complexSchemaExpIds)
+      actPhyNames.values.foreach(assertUUIDColumnName(_))
+    }
+  }
+
+  test("Try to apply an invalid column mapping mode on existing table") {
+    withTempDir { dir =>
+      // Create a table and initiate a transaction
+      val txn = getTxnWithMaxFeatureSupport(dir.getCanonicalPath)
+
+      // Upgrade the table protocol version to a version that supports column mapping
+      // TODO: until a public API is available, change protocol directly on the txn impl
+      txn.asInstanceOf[OptimisticTransactionImpl].upgradeProtocolVersion(
+        DeltaColumnMapping.MIN_READER_VERSION,
+        DeltaColumnMapping.MIN_WRITER_VERSION)
+
+      val ex = intercept[ColumnMappingUnsupportedException] {
+        // Try to upgrade to an invalid column mapping and expect an error
+        txn.updateMetadata(txn.metadata().withColumnMappingMode("invalid"))
+      }
+      assert(ex.getMessage contains
+        "The column mapping mode `invalid` is not supported for this Delta version. " +
+          "Please upgrade if you want to use this mode.")
+    }
+  }
+
+  private def getTxnWithMaxFeatureSupport(path: String): OptimisticTransaction = {
+    // Create a table with highest possible protocol support (temporary until we have
+    // protocol upgrade API)
+    val log = getDeltaLogWithMaxFeatureSupport(new Configuration(), path)
+    log.startTransaction()
+  }
+
   private def struct(fields: StructField *): StructType = new StructType(fields.toArray)
 
   private def map(keyType: DataType, valueType: DataType): MapType =
@@ -318,6 +406,9 @@ class DeltaColumnMappingSuite extends FunSuite {
       configuration = conf
     )
   }
+
+  private def metadataJ(schema: StructType, conf: Map[String, String]): MetadataJ =
+    ConversionUtils.convertMetadata(metadata(schema, conf))
 
   private def protocol(readerVersion: Int, writerVersion: Int): Protocol =
     new Protocol(readerVersion, writerVersion)
@@ -428,4 +519,6 @@ class DeltaColumnMappingSuite extends FunSuite {
       id = 3,
       phyName = "s")
     )
+
+  private val OP = new Operation(Operation.Name.MANUAL_UPDATE)
 }

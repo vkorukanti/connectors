@@ -202,6 +202,12 @@ private[internal] class OptimisticTransactionImpl(
       isCreatingNewTable = true
     }
 
+    latestMetadata = DeltaColumnMapping.verifyAndUpdateMetadataChange(
+      protocol,
+      snapshot.metadataScala,
+      latestMetadata,
+      isCreatingNewTable)
+
     if (snapshot.metadataScala.schemaString != latestMetadata.schemaString) {
       SchemaUtils.checkUnenforceableNotNullConstraints(latestMetadata.schema)
     }
@@ -482,6 +488,14 @@ private[internal] class OptimisticTransactionImpl(
   private def verifyNewMetadata(metadata: Metadata): Unit = {
     SchemaMergingUtils.checkColumnNameDuplication(metadata.schema, "in the metadata update")
     SchemaUtils.checkFieldNames(SchemaMergingUtils.explodeNestedFieldNames(metadata.dataSchema))
+
+    if (metadata.columnMappingMode == NoMapping) {
+      // Check the column names don't have any unsupported characters
+      SchemaUtils.checkFieldNames(SchemaMergingUtils.explodeNestedFieldNames(metadata.dataSchema))
+    } else {
+      DeltaColumnMapping.checkColumnIdAndPhysicalNameAssignments(
+        metadata.schema, metadata.columnMappingMode)
+    }
 
     try {
       SchemaUtils.checkFieldNames(metadata.partitionColumns)

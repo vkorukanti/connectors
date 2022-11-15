@@ -320,7 +320,7 @@ private[internal] object DeltaErrors {
       s"The Delta table configuration $prop cannot be specified by the user")
   }
 
-  def unsupportedColumnMappingMode(mode: String): Throwable =
+  def unsupportedColumnMappingMode(mode: String): ColumnMappingUnsupportedException =
     new ColumnMappingUnsupportedException(s"The column mapping mode `$mode` is " +
       s"not supported for this Delta version. Please upgrade if you want to use this mode.")
 

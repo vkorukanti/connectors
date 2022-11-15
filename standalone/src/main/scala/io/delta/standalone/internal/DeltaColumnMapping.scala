@@ -29,7 +29,6 @@ import io.delta.standalone.internal.logging.Logging
 import io.delta.standalone.internal.util.{CaseInsensitiveMap, SchemaMergingUtils, SchemaUtils}
 
 trait DeltaColumnMappingBase extends Logging {
-
   // Minimum writer and reader version required for column mapping support
   val MIN_WRITER_VERSION = 5
   val MIN_READER_VERSION = 2
@@ -370,7 +369,7 @@ object DeltaColumnMapping extends DeltaColumnMappingBase
  * A trait for Delta column mapping modes.
  */
 sealed trait DeltaColumnMappingMode {
-  def name: String
+  val name: String
 }
 
 /**
