@@ -796,3 +796,20 @@ lazy val flink = (project in file("flink"))
     // Ensure unidoc is run with tests. Must be cleaned before test for unidoc to be generated.
     (Test / test) := ((Test / test) dependsOn (Compile / unidoc)).value
   )
+
+lazy val core = (project in file("core"))
+  .settings(
+    name := "delta-core",
+    commonSettings,
+    skipReleaseSettings,
+    libraryDependencies ++= Seq()
+  )
+
+lazy val defaultCore = (project in file("default-core"))
+  .dependsOn(core)
+  .settings(
+    name := "delta-core-default",
+    commonSettings,
+    skipReleaseSettings,
+    libraryDependencies ++= Seq()
+  )
