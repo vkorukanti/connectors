@@ -17,6 +17,7 @@
 package io.delta.standalone.internal
 
 import java.io.IOException
+import java.nio.file.Paths
 import java.sql.Timestamp
 import java.util.TimeZone
 import java.util.concurrent.locks.ReentrantLock
