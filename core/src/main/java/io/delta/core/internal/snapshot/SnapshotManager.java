@@ -1,4 +1,4 @@
-package io.delta.core.internal;
+package io.delta.core.internal.snapshot;
 
 import java.io.FileNotFoundException;
 import java.util.*;
@@ -6,19 +6,23 @@ import java.util.stream.Collectors;
 
 import io.delta.core.Snapshot;
 import io.delta.core.fs.FileStatus;
+import io.delta.core.internal.LogSegment;
+import io.delta.core.internal.TableImpl;
 import io.delta.core.internal.checkpoint.CheckpointInstance;
 import io.delta.core.internal.checkpoint.CheckpointMetaData;
 import io.delta.core.internal.checkpoint.Checkpointer;
+import io.delta.core.internal.checksum.VersionChecksum;
 import io.delta.core.internal.lang.ListUtils;
 import io.delta.core.internal.lang.Tuple2;
 import io.delta.core.internal.util.FileNames;
+import io.delta.core.internal.util.Logging;
 import io.delta.core.utils.CloseableIterator;
 
-public class SnapshotManager {
+public class SnapshotManager implements Logging {
 
-    ////////////////////
-    // Static Methods //
-    ////////////////////
+    /////////////////////////////
+    // Static Fields / Methods //
+    /////////////////////////////
 
     /**
      * - Verify the versions are contiguous.
@@ -62,7 +66,8 @@ public class SnapshotManager {
      * Update current snapshot by applying the new delta files if any.
      */
     public Snapshot update() {
-
+        // TODO
+        return null;
     }
 
     //////////////////
@@ -154,11 +159,35 @@ public class SnapshotManager {
      * `lastCheckpoint` file as a hint on where to start listing the transaction log directory. If
      * the _delta_log directory doesn't exist, this method will return an `InitialSnapshot`.
      */
-    private Snapshot getSnapshotAtInit() {
+    private SnapshotImpl getSnapshotAtInit() {
         final long currentTimestamp = System.currentTimeMillis();
         final Optional<CheckpointMetaData> lastCheckpointOpt =
             tableImpl.checkpointer.readLastCheckpointFile();
-        getLogSegmentFrom(lastCheckpointOpt);
+        final Optional<LogSegment> logSegmentOpt = getLogSegmentFrom(lastCheckpointOpt);
+        return logSegmentOpt
+            .map(logSegment -> createSnapshot(logSegment, lastCheckpointOpt, Optional.empty()))
+            .orElse(new InitialSnapshot());
+    }
+
+    private SnapshotImpl createSnapshot(
+            LogSegment initSegment,
+            Optional<CheckpointMetaData> checkpointMetadataOptHint,
+            Optional<VersionChecksum> checksumOpt) {
+        final String startingFromStr = initSegment
+            .checkpointVersionOpt
+            .map(v -> String.format(" starting from checkpoint version %s.", v))
+            .orElse(".");
+        logInfo(() -> String.format("Loading version %s%s", initSegment.version, startingFromStr));
+
+        // TODO(SCOTT): createSnapshotFromGivenOrEquivalentLogSegment
+
+        return new SnapshotImpl(
+            tableImpl.logPath,
+            initSegment.version,
+            initSegment,
+            tableImpl,
+            initSegment.lastCommitTimestamp
+        );
     }
 
     /**
@@ -301,20 +330,52 @@ public class SnapshotManager {
             verifyDeltaVersions(deltaVersions, Optional.of(newCheckpointVersion + 1), versionToLoadOpt);
         }
 
+        // TODO(SCOTT): double check newCheckpointOpt.get() won't error out
+
         final long newVersion = deltaVersions.isEmpty() ? newCheckpointOpt.get().version : deltaVersions.getLast();
-        final List<FileStatus> newCheckpointFiles
 
+        // In the case where `deltasAfterCheckpoint` is empty, `deltas` should still not be empty,
+        // they may just be before the checkpoint version unless we have a bug in log cleanup.
+        if (deltas.isEmpty()) {
+            throw new IllegalStateException(
+                String.format("Could not find any delta files for version %s", newVersion)
+            );
+        }
 
-        val newVersion = deltaVersions.lastOption.getOrElse(newCheckpoint.get.version)
-        val newCheckpointFiles: Seq[FileStatus] = newCheckpoint.map { newCheckpoint =>
-            val newCheckpointPaths = newCheckpoint.getCorrespondingFiles(logPath).toSet
-            val newCheckpointFileArray = checkpoints.filter(f => newCheckpointPaths.contains(f.getPath))
-            assert(newCheckpointFileArray.length == newCheckpointPaths.size,
-            "Failed in getting the file information for:\n" +
-                newCheckpointPaths.mkString(" -", "\n -", "") + "\n" +
-                "among\n" + checkpoints.map(_.getPath).mkString(" -", "\n -", ""))
-            newCheckpointFileArray.toSeq
-        }.getOrElse(Nil)
+        if (versionToLoadOpt.map(v -> v != newVersion).orElse(false)) {
+            throw new IllegalStateException(
+                String.format("Trying to load a non-existent version %s", versionToLoadOpt.get())
+            );
+        }
+
+        final long lastCommitTimestamp = deltas.get(deltas.size() - 1).modificationTime();
+
+        final List<FileStatus> newCheckpointFiles = newCheckpointOpt.map(newCheckpoint -> {
+           final Set<String> newCheckpointPaths =
+               new HashSet<>(newCheckpoint.getCorrespondingFiles(tableImpl.logPath));
+           final List<FileStatus> newCheckpointFileList = checkpoints
+               .stream()
+               .filter(f -> newCheckpointPaths.contains(f.path()))
+               .collect(Collectors.toList());
+           assert (newCheckpointFileList.size() == newCheckpointPaths.size()) :
+               String.format(
+                   "Filed in getting the file information for:\n%s\namong\n%s",
+                   String.join("\n -", newCheckpointPaths),
+                   checkpoints.stream().map(FileStatus::path).collect(Collectors.joining("\n - "))
+               );
+           return newCheckpointFileList;
+        }).orElse(Collections.emptyList());
+
+        return Optional.of(
+            new LogSegment(
+                tableImpl.logPath,
+                newVersion,
+                deltasAfterCheckpoint,
+                newCheckpointFiles,
+                newCheckpointOpt.map(x -> x.version),
+                lastCommitTimestamp
+            )
+        );
     }
 
     /**

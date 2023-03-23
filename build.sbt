@@ -803,7 +803,7 @@ lazy val core = (project in file("core"))
     commonSettings,
     skipReleaseSettings,
     libraryDependencies ++= Seq(
-//      "com.google.guava" % "guava" % "31.1-jre" // Streams.stream
+
     )
   )
 

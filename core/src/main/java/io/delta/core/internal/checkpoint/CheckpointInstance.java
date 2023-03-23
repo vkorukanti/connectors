@@ -1,5 +1,7 @@
 package io.delta.core.internal.checkpoint;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import io.delta.core.internal.lang.Ordered;
@@ -27,6 +29,13 @@ public class CheckpointInstance implements Ordered<CheckpointInstance> {
     boolean isNotLaterThan(CheckpointInstance other) {
         if (other == CheckpointInstance.MAX_VALUE) return true;
         return version <= other.version;
+    }
+
+    public List<String> getCorrespondingFiles(String path) {
+        assert (this != CheckpointInstance.MAX_VALUE) : "Can't get files for CheckpointVersion.MaxValue.";
+        return numParts
+            .map(parts -> FileNames.checkpointFileWithParts(path, version, parts))
+            .orElseGet(() -> Collections.singletonList(FileNames.checkpointFileSingular(path, version)));
     }
 
     @Override

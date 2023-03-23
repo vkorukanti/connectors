@@ -7,6 +7,7 @@ import io.delta.core.Snapshot;
 import io.delta.core.Table;
 import io.delta.core.helpers.TableHelper;
 import io.delta.core.internal.checkpoint.Checkpointer;
+import io.delta.core.internal.snapshot.SnapshotManager;
 
 public class TableImpl implements Table {
 
