@@ -802,7 +802,9 @@ lazy val core = (project in file("core"))
     name := "delta-core",
     commonSettings,
     skipReleaseSettings,
-    libraryDependencies ++= Seq()
+    libraryDependencies ++= Seq(
+//      "com.google.guava" % "guava" % "31.1-jre" // Streams.stream
+    )
   )
 
 lazy val defaultCore = (project in file("default-core"))
@@ -811,5 +813,8 @@ lazy val defaultCore = (project in file("default-core"))
     name := "delta-core-default",
     commonSettings,
     skipReleaseSettings,
-    libraryDependencies ++= Seq()
+    libraryDependencies ++= Seq(
+
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.14.2" // ObjectMapper
+    )
   )

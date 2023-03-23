@@ -2,9 +2,9 @@ package io.delta.core.fs;
 
 public interface FileStatus {
 
-    String filePath();
+    String path();
 
-    long size();
+    long length();
 
     long modificationTime();
 }
