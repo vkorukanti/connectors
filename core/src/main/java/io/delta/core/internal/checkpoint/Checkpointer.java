@@ -72,17 +72,10 @@ public class Checkpointer {
 
     /** Loads the checkpoint metadata from the _last_checkpoint file. */
     private Optional<CheckpointMetaData> loadMetadataFromFile(int tries) {
-        // DECISION 1 OPTION 1
-        final CloseableIterator<Row> data1 =
-            tableImpl.tableHelper.readJsonFile(LAST_CHECKPOINT, CheckpointMetaData.READ_SCHEMA);
-        final Optional<CheckpointMetaData> result1 = Optional.of(CheckpointMetaData.fromRow(data1.next()));
+        final CloseableIterator<Row> data1 = tableImpl
+            .tableHelper
+            .readJsonFile(LAST_CHECKPOINT, CheckpointMetaData.READ_SCHEMA);
 
-        // DECISION 1 OPTION 2
-        final CloseableIterator<String> data2 = tableImpl.tableHelper.readJsonFile(LAST_CHECKPOINT);
-        final Optional<CheckpointMetaData> result2 = Optional.of(
-            tableImpl.tableHelper.fromJson(data2.next(), CheckpointMetaData.TYPE_REFERENCE)
-        );
-
-        return result1;
+        return Optional.of(CheckpointMetaData.fromRow(data1.next()));
     }
 }

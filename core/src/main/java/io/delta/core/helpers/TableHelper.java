@@ -12,15 +12,7 @@ public interface TableHelper {
 
     CloseableIterator<FileStatus> listFiles(String path) throws FileNotFoundException;
 
-    CloseableIterator<FileStatus> listFiles(String path, String prefixToListFrom) throws FileNotFoundException;
-
-    // DECISION 1 OPTION 1
     CloseableIterator<Row> readJsonFile(String path, StructType readSchema);
-    // each class needs a fromRow()
-
-    // DECISION 1 OPTION 2
-    CloseableIterator<String> readJsonFile(String path);
-    <T> T fromJson(String json, TypeReference<T> typeReference);
 
     /** Uses the readSchema for partition pruning. */
     CloseableIterator<Row> readParquetFile(String path, StructType readSchema);

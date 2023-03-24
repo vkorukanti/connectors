@@ -96,7 +96,6 @@ public class SnapshotManager implements Logging {
         // LIST the directory, starting from the provided lower bound (treat missing dir as empty).
         // NOTE: "empty/missing" is _NOT_ equivalent to "contains no useful commit files."
         try {
-            // TODO: would be great to build our own better Optional class, e.g. Option.filterNot
             CloseableIterator<FileStatus> results = listFrom(startVersion);
             if (results.hasNext()) {
                 return Optional.of(results);
