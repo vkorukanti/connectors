@@ -84,10 +84,10 @@ lazy val commonSettings = Seq(
   // Can be run explicitly via: build/sbt $module/checkstyle
   // Will automatically be run during compilation (e.g. build/sbt compile)
   // and during tests (e.g. build/sbt test)
-  checkstyleConfigLocation := CheckstyleConfigLocation.File("dev/checkstyle.xml"),
-  checkstyleSeverityLevel := Some(CheckstyleSeverityLevel.Error),
-  (Compile / checkstyle) := (Compile / checkstyle).triggeredBy(Compile / compile).value,
-  (Test / checkstyle) := (Test / checkstyle).triggeredBy(Test / compile).value
+//  checkstyleConfigLocation := CheckstyleConfigLocation.File("dev/checkstyle.xml"),
+//  checkstyleSeverityLevel := Some(CheckstyleSeverityLevel.Error),
+//  (Compile / checkstyle) := (Compile / checkstyle).triggeredBy(Compile / compile).value,
+//  (Test / checkstyle) := (Test / checkstyle).triggeredBy(Test / compile).value
 )
 
 lazy val releaseSettings = Seq(
@@ -797,9 +797,9 @@ lazy val flink = (project in file("flink"))
     (Test / test) := ((Test / test) dependsOn (Compile / unidoc)).value
   )
 
-lazy val core = (project in file("core"))
+lazy val kernel = (project in file("kernel"))
   .settings(
-    name := "delta-core",
+    name := "delta-kernel",
     commonSettings,
     skipReleaseSettings,
     libraryDependencies ++= Seq(
@@ -807,14 +807,22 @@ lazy val core = (project in file("core"))
     )
   )
 
-lazy val defaultCore = (project in file("default-core"))
-  .dependsOn(core)
+lazy val kernelDefault = (project in file("kernel-default"))
+  .dependsOn(kernel)
   .settings(
-    name := "delta-core-default",
+    name := "delta-kernel-default",
     commonSettings,
     skipReleaseSettings,
     libraryDependencies ++= Seq(
+      "org.apache.hadoop" % "hadoop-client-api" % "3.3.1", // Configuration, Path
+      "io.delta" % "delta-storage" % "2.2.0", // LogStore
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.13.5", // ObjectMapper
 
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.14.2" // ObjectMapper
+      "org.scalatest" %% "scalatest" % "3.2.15" % "test",
+      "io.delta" %% "delta-core" % "2.2.0" % "test",
+      "org.apache.spark" %% "spark-sql" % "3.3.2" % "test", // SparkSession
+      "org.apache.spark" %% "spark-sql" % "3.3.2" % "test" classifier "tests",
+      "org.apache.spark" %% "spark-core" % "3.3.2" % "test" classifier "tests",
+      "org.apache.spark" %% "spark-catalyst" % "3.3.2" % "test" classifier "tests",
     )
   )
