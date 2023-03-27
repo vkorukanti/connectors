@@ -16,20 +16,15 @@
 
 package io.delta.core
 
-import org.apache.spark.SparkConf
-import org.apache.spark.sql.QueryTest
-import org.apache.spark.sql.test.SharedSparkSession
+import io.delta.core.helpers.DefaultTableHelper
+import io.delta.core.util.GoldenTableUtils
+import org.scalatest.funsuite.AnyFunSuite
 
-class TableSuite extends QueryTest with SharedSparkSession {
-
-  override def sparkConf: SparkConf = super.sparkConf
-    .set("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-    .set("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+class TableSuite extends AnyFunSuite with GoldenTableUtils {
 
   test("basic read") {
-    withTempDir { dir =>
-      val path = dir.getCanonicalPath
-      spark.range(100).write.format("delta").save(path)
+    withGoldenTable("basic-with-checkpoint") { path =>
+      val table = Table.forPath(path, new DefaultTableHelper())
     }
   }
 }

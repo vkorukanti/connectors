@@ -1,11 +1,13 @@
 package io.delta.core.helpers;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Iterator;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.delta.core.data.JsonRow;
 import org.apache.hadoop.conf.Configuration;
 
@@ -32,6 +34,7 @@ public class DefaultTableHelper implements TableHelper {
 
     @Override
     public CloseableIterator<FileStatus> listFiles(String path) {
+        System.out.println("Scott > DefaultTableHelper > listFiles :: path " + path);
         return new CloseableIterator<FileStatus>() {
             private final Iterator<org.apache.hadoop.fs.FileStatus> iter;
 
@@ -52,6 +55,9 @@ public class DefaultTableHelper implements TableHelper {
             public FileStatus next() {
                 return new FileStatus() {
                     final org.apache.hadoop.fs.FileStatus impl = iter.next();
+                    {
+                        System.out.println("listFiles > next :: " + impl.getPath());
+                    }
 
                     @Override
                     public String path() {
@@ -76,7 +82,7 @@ public class DefaultTableHelper implements TableHelper {
     }
 
     @Override
-    public CloseableIterator<Row> readJsonFile(String path, StructType readSchema) {
+    public CloseableIterator<Row> readJsonFile(String path, StructType readSchema) throws FileNotFoundException {
         return new CloseableIterator<Row>() {
             private final io.delta.storage.CloseableIterator<String> iter;
 
@@ -84,6 +90,10 @@ public class DefaultTableHelper implements TableHelper {
                 try {
                     iter = logStore.read(new Path(path), hadoopConf);
                 } catch (IOException ex) {
+                    if (ex instanceof FileNotFoundException) {
+                        throw (FileNotFoundException) ex;
+                    }
+
                     throw new RuntimeException("Could not resolve the FileSystem", ex);
                 }
             }
@@ -103,7 +113,7 @@ public class DefaultTableHelper implements TableHelper {
                 final String json = iter.next();
                 try {
                     final JsonNode jsonNode = objectMapper.readTree(json);
-                    return new JsonRow(jsonNode, readSchema);
+                    return new JsonRow((ObjectNode) jsonNode, readSchema);
                 } catch (JsonProcessingException ex) {
                     throw new RuntimeException(String.format("Could not parse JSON: %s", json), ex);
                 }

@@ -76,6 +76,7 @@ public class SnapshotManager implements Logging {
 
     /** Get an iterator of files in the _delta_log directory starting with the startVersion. */
     private CloseableIterator<FileStatus> listFrom(long startVersion) throws FileNotFoundException {
+        logDebug(String.format("listFrom :: startVersion " + startVersion));
         return tableImpl
             .tableHelper
             .listFiles(FileNames.listingPrefix(tableImpl.logPath, startVersion));
@@ -120,32 +121,43 @@ public class SnapshotManager implements Logging {
     protected final Optional<List<FileStatus>> listDeltaAndCheckpointFiles(
             long startVersion,
             Optional<Long> versionToLoad) {
+        logDebug(
+            String.format(
+                "listDeltaAndCheckpointFiles :: startVersion %s, versionToLoad %s",
+                startVersion, versionToLoad)
+        );
+
         return listFromOrNone(startVersion).map(fileStatusesIter -> {
             final List<FileStatus> output = new ArrayList<>();
 
             while(fileStatusesIter.hasNext()) {
                 final FileStatus fileStatus = fileStatusesIter.next();
+                System.out.println("output AAA " + fileStatus.path());
 
                 // Pick up all checkpoint and delta files
                 if (!isDeltaCommitOrCheckpointFile(fileStatus.path())) {
+                    System.out.println(fileStatus.path() + " BBB");
                     continue;
                 }
 
                 // Checkpoint files of 0 size are invalid but may be ignored silently when read,
                 // hence we drop them so that we never pick up such checkpoints.
                 if (FileNames.isCheckpointFile(fileStatus.path()) && fileStatus.length() == 0) {
+                    System.out.println(fileStatus.path() + " CCC");
                     continue;
                 }
 
                 // Take files until the version we want to load
                 final boolean versionWithinRange = versionToLoad
-                    .map(v -> FileNames.getFileVersion(fileStatus.path()) < v)
-                    .orElse(false);
+                    .map(v -> FileNames.getFileVersion(fileStatus.path()) <= v)
+                    .orElse(true);
 
                 if (!versionWithinRange) {
+                    System.out.println(fileStatus.path() + " DDD");
                     break;
                 }
 
+                System.out.println("output add " + fileStatus.path());
                 output.add(fileStatus);
             }
 
@@ -159,6 +171,8 @@ public class SnapshotManager implements Logging {
      * the _delta_log directory doesn't exist, this method will return an `InitialSnapshot`.
      */
     private SnapshotImpl getSnapshotAtInit() {
+        logDebug("getSnapshotAtInit");
+
         final long currentTimestamp = System.currentTimeMillis();
         final Optional<CheckpointMetaData> lastCheckpointOpt =
             tableImpl.checkpointer.readLastCheckpointFile();
@@ -197,6 +211,7 @@ public class SnapshotManager implements Logging {
      */
     private Optional<LogSegment> getLogSegmentFrom(
             Optional<CheckpointMetaData> startingCheckpoint) {
+        logDebug("getLogSegmentFrom :: startingCheckpoint " + startingCheckpoint);
         return getLogSegmentForVersion(startingCheckpoint.map(x -> x.version), Optional.empty());
     }
 
@@ -249,11 +264,13 @@ public class SnapshotManager implements Logging {
             // recursive call to [[getLogSegmentForVersion]] below (same as before the refactor).
             newFiles = Collections.emptyList();
         }
-
+        System.out.println("Scott > newFiles empty " + newFiles.isEmpty());
         if (newFiles.isEmpty() && !startCheckpointOpt.isPresent()) {
             // We can't construct a snapshot because the directory contained no usable commit
             // files... but we can't return Optional.empty either, because it was not truly empty.
-            throw new RuntimeException("Empty directory");
+            throw new RuntimeException(
+                String.format("Empty directory: %s", tableImpl.logPath)
+            );
         } else if (newFiles.isEmpty()) {
             // The directory may be deleted and recreated and we may have stale state in our DeltaLog
             // singleton, so try listing from the first version
@@ -324,7 +341,12 @@ public class SnapshotManager implements Logging {
         // We may just be getting a checkpoint file after the filtering
         if (!deltaVersions.isEmpty()) {
             if (deltaVersions.get(0) != newCheckpointVersion + 1) {
-                throw new RuntimeException("log file not found excpetion");
+                throw new RuntimeException(
+                    String.format(
+                        "Log file not found: %s",
+                        FileNames.deltaFile(tableImpl.logPath, newCheckpointVersion + 1)
+                    )
+                );
             }
             verifyDeltaVersions(deltaVersions, Optional.of(newCheckpointVersion + 1), versionToLoadOpt);
         }

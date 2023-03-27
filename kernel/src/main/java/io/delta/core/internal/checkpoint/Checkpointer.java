@@ -1,13 +1,15 @@
 package io.delta.core.internal.checkpoint;
 
+import java.io.FileNotFoundException;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import io.delta.core.data.Row;
 import io.delta.core.internal.TableImpl;
+import io.delta.core.internal.util.Logging;
 import io.delta.core.utils.CloseableIterator;
 
-public class Checkpointer {
+public class Checkpointer implements Logging {
 
     ////////////////////
     // Static Methods //
@@ -72,10 +74,21 @@ public class Checkpointer {
 
     /** Loads the checkpoint metadata from the _last_checkpoint file. */
     private Optional<CheckpointMetaData> loadMetadataFromFile(int tries) {
-        final CloseableIterator<Row> data1 = tableImpl
-            .tableHelper
-            .readJsonFile(LAST_CHECKPOINT, CheckpointMetaData.READ_SCHEMA);
+        try {
+            final CloseableIterator<Row> jsonIter = tableImpl
+                .tableHelper
+                .readJsonFile(LAST_CHECKPOINT, CheckpointMetaData.READ_SCHEMA);
 
-        return Optional.of(CheckpointMetaData.fromRow(data1.next()));
+            if (!jsonIter.hasNext()) {
+                return Optional.empty();
+            }
+
+            return Optional.of(CheckpointMetaData.fromRow(jsonIter.next()));
+        } catch (FileNotFoundException ex) {
+            return Optional.empty();
+        }
+
+
+
     }
 }

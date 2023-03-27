@@ -12,7 +12,8 @@ public interface TableHelper {
 
     CloseableIterator<FileStatus> listFiles(String path) throws FileNotFoundException;
 
-    CloseableIterator<Row> readJsonFile(String path, StructType readSchema);
+    // TODO: we should update LogStore.java :: read to throw a FileNotFoundException
+    CloseableIterator<Row> readJsonFile(String path, StructType readSchema) throws FileNotFoundException;
 
     /** Uses the readSchema for partition pruning. */
     CloseableIterator<Row> readParquetFile(String path, StructType readSchema);

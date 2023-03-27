@@ -2,13 +2,31 @@ package io.delta.core.internal.util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class FileNames {
 
     private FileNames() { }
 
+    private static final Pattern DELTA_FILE_PATTERN =
+        Pattern.compile("\\d+\\.json");
+
+    private static final Pattern CHECKPOINT_FILE_PATTERN =
+        Pattern.compile("\\d+\\.checkpoint(\\.\\d+\\.\\d+)?\\.parquet");
+
+    /** Returns the delta (json format) path for a given delta file. */
+    public static String deltaFile(String path, long version) {
+        return String.format("%s/%020d.json", path, version);
+    }
+
     /** Returns the version for the given delta path. */
     public static long deltaVersion(String path) {
+        return Long.parseLong(path.split("\\.")[0]);
+    }
+
+    /** Returns the version for the given checkpoint path. */
+    public static long checkpointVersion(String path) {
         return Long.parseLong(path.split("\\.")[0]);
     }
 
@@ -49,11 +67,11 @@ public final class FileNames {
     }
 
     public static boolean isCheckpointFile(final String path) {
-        return false;
+        return CHECKPOINT_FILE_PATTERN.matcher(path).find();
     }
 
     public static boolean isDeltaFile(final String path) {
-        return false;
+        return DELTA_FILE_PATTERN.matcher(path).find();
     }
 
     /**
@@ -63,18 +81,16 @@ public final class FileNames {
      * upgrade.
      */
     public static long getFileVersion(String path) {
-        return 101;
-//        if (isCheckpointFile(path)) {
-//            checkpointVersion(path)
-//        } else if (isDeltaFile(path)) {
-//            deltaVersion(path)
+        if (isCheckpointFile(path)) {
+            return checkpointVersion(path);
+        } else if (isDeltaFile(path)) {
+            return deltaVersion(path);
 //        } else if (isChecksumFile(path)) {
 //            checksumVersion(path)
-//        } else {
-//            // scalastyle:off throwerror
-//            throw new AssertionError(
-//                s"Unexpected file type found in transaction log: $path")
-//            // scalastyle:on throwerror
-//        }
+        } else {
+            throw new AssertionError(
+                String.format("Unexpected file type found in transaction log: %s", path)
+            );
+        }
     }
 }

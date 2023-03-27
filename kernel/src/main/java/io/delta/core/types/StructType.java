@@ -1,6 +1,7 @@
 package io.delta.core.types;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -24,6 +25,10 @@ public final class StructType extends DataType {
 
     public StructType add(String name, DataType dataType) {
         return add(new StructField(name, dataType, true /* nullable */));
+    }
+
+    public List<StructField> fields() {
+        return Collections.unmodifiableList(fields);
     }
 
     public List<String> fieldNames() {

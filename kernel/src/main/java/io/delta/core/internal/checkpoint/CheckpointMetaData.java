@@ -7,7 +7,10 @@ import io.delta.core.types.StructType;
 public class CheckpointMetaData {
 
     public static CheckpointMetaData fromRow(Row row) {
-        return null;
+        return new CheckpointMetaData(
+            row.getLong(0),
+            row.getLong(1)
+        );
     }
 
     public static StructType READ_SCHEMA = new StructType()
@@ -20,5 +23,13 @@ public class CheckpointMetaData {
     public CheckpointMetaData(long version, long size) {
         this.version = version;
         this.size = size;
+    }
+
+    @Override
+    public String toString() {
+        return "CheckpointMetaData{" +
+            "version=" + version +
+            ", size=" + size +
+            '}';
     }
 }
