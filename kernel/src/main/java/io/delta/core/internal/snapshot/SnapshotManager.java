@@ -52,6 +52,7 @@ public class SnapshotManager implements Logging {
     ///////////////////////////////
 
     private final TableImpl tableImpl;
+    // TODO: LogSegmentManager which does all the log segment stuff
     volatile private Snapshot currentSnapshot;
 
     public SnapshotManager(TableImpl tableImpl) {
