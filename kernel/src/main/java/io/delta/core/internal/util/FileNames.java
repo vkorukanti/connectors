@@ -2,8 +2,9 @@ package io.delta.core.internal.util;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import io.delta.core.fs.Path;
 
 public final class FileNames {
 
@@ -16,18 +17,18 @@ public final class FileNames {
         Pattern.compile("\\d+\\.checkpoint(\\.\\d+\\.\\d+)?\\.parquet");
 
     /** Returns the delta (json format) path for a given delta file. */
-    public static String deltaFile(String path, long version) {
+    public static String deltaFile(Path path, long version) {
         return String.format("%s/%020d.json", path, version);
     }
 
     /** Returns the version for the given delta path. */
-    public static long deltaVersion(String path) {
-        return Long.parseLong(path.split("\\.")[0]);
+    public static long deltaVersion(Path path) {
+        return Long.parseLong(path.getName().split("\\.")[0]);
     }
 
     /** Returns the version for the given checkpoint path. */
-    public static long checkpointVersion(String path) {
-        return Long.parseLong(path.split("\\.")[0]);
+    public static long checkpointVersion(Path path) {
+        return Long.parseLong(path.getName().split("\\.")[0]);
     }
 
     /**
@@ -36,7 +37,7 @@ public final class FileNames {
      * Intended for use with listFrom to get all files from this version onwards. The returned Path
      * will not exist as a file.
      */
-    public static String listingPrefix(final String path, final long version) {
+    public static String listingPrefix(Path path, long version) {
         return String.format("%s/%020d.", path, version);
     }
 
@@ -45,8 +46,8 @@ public final class FileNames {
      *
      * In a future protocol version this path will stop being written.
      */
-    public static String checkpointFileSingular(String path, long version) {
-        return String.format("%s/%020d.checkpoint.parquet", path, version);
+    public static Path checkpointFileSingular(Path path, long version) {
+        return new Path(path, String.format("%020d.checkpoint.parquet", version));
     }
 
     /**
@@ -58,20 +59,25 @@ public final class FileNames {
      * checkpoint part 20 out of 60 for the snapshot at version 4915. Zero padding is for
      * lexicographic sorting.
      */
-    public static List<String> checkpointFileWithParts(String path, long version, int numParts) {
-        final List<String> output = new ArrayList<>();
+    public static List<Path> checkpointFileWithParts(Path path, long version, int numParts) {
+        final List<Path> output = new ArrayList<>();
         for (int i = 1; i < numParts + 1; i++) {
-            output.add(String.format("%s/%020d.checkpoint.%010d.%010d.parquet", path, i, numParts, version));
+            output.add(
+                new Path(
+                    path,
+                    String.format("%020d.checkpoint.%010d.%010d.parquet", i, numParts, version)
+                )
+            );
         }
         return output;
     }
 
-    public static boolean isCheckpointFile(final String path) {
-        return CHECKPOINT_FILE_PATTERN.matcher(path).find();
+    public static boolean isCheckpointFile(Path path) {
+        return CHECKPOINT_FILE_PATTERN.matcher(path.getName()).find();
     }
 
-    public static boolean isDeltaFile(final String path) {
-        return DELTA_FILE_PATTERN.matcher(path).find();
+    public static boolean isDeltaFile(Path path) {
+        return DELTA_FILE_PATTERN.matcher(path.getName()).find();
     }
 
     /**
@@ -80,7 +86,7 @@ public final class FileNames {
      * compatibility in cases where new file types are added, but without an explicit protocol
      * upgrade.
      */
-    public static long getFileVersion(String path) {
+    public static long getFileVersion(Path path) {
         if (isCheckpointFile(path)) {
             return checkpointVersion(path);
         } else if (isDeltaFile(path)) {

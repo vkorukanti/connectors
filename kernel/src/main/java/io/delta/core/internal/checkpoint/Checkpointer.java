@@ -5,6 +5,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import io.delta.core.data.Row;
+import io.delta.core.fs.Path;
 import io.delta.core.internal.TableImpl;
 import io.delta.core.internal.util.Logging;
 import io.delta.core.utils.CloseableIterator;
@@ -57,14 +58,14 @@ public class Checkpointer implements Logging {
     ///////////////////////////////
 
     /** The path to the file that holds metadata about the most recent checkpoint. */
-    private final String LAST_CHECKPOINT;
+    private final Path LAST_CHECKPOINT;
 
     private final TableImpl tableImpl;
 
     public Checkpointer(TableImpl tableImpl) {
         this.tableImpl = tableImpl;
 
-        this.LAST_CHECKPOINT = tableImpl.logPath + "/" + LAST_CHECKPOINT_FILE_NAME;
+        this.LAST_CHECKPOINT = new Path(tableImpl.logPath, LAST_CHECKPOINT_FILE_NAME);
     }
 
     /** Returns information about the most recent checkpoint. */
@@ -77,7 +78,7 @@ public class Checkpointer implements Logging {
         try {
             final CloseableIterator<Row> jsonIter = tableImpl
                 .tableHelper
-                .readJsonFile(LAST_CHECKPOINT, CheckpointMetaData.READ_SCHEMA);
+                .readJsonFile(LAST_CHECKPOINT.toString(), CheckpointMetaData.READ_SCHEMA);
 
             if (!jsonIter.hasNext()) {
                 return Optional.empty();
@@ -87,8 +88,5 @@ public class Checkpointer implements Logging {
         } catch (FileNotFoundException ex) {
             return Optional.empty();
         }
-
-
-
     }
 }

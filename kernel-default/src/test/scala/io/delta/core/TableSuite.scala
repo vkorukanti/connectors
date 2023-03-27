@@ -22,9 +22,19 @@ import org.scalatest.funsuite.AnyFunSuite
 
 class TableSuite extends AnyFunSuite with GoldenTableUtils {
 
-  test("basic read") {
+  test("can load latest table version - with a checkpoint") {
     withGoldenTable("basic-with-checkpoint") { path =>
       val table = Table.forPath(path, new DefaultTableHelper())
+      val snapshot = table.getLatestSnapshot
+      assert(snapshot.getVersion === 14)
+    }
+  }
+
+  test("can load latest table version - without checkpoint") {
+    withGoldenTable("basic-no-checkpoint") { path =>
+      val table = Table.forPath(path, new DefaultTableHelper())
+      val snapshot = table.getLatestSnapshot
+      assert(snapshot.getVersion === 8)
     }
   }
 }

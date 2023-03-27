@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import io.delta.core.fs.Path;
 import io.delta.core.internal.lang.Ordered;
 import io.delta.core.internal.util.FileNames;
 
@@ -13,7 +14,7 @@ public class CheckpointInstance implements Ordered<CheckpointInstance> {
     public final long version;
     public final Optional<Integer> numParts;
 
-    public CheckpointInstance(String path) {
+    public CheckpointInstance(Path path) {
         this(FileNames.getFileVersion(path));
     }
 
@@ -31,7 +32,7 @@ public class CheckpointInstance implements Ordered<CheckpointInstance> {
         return version <= other.version;
     }
 
-    public List<String> getCorrespondingFiles(String path) {
+    public List<Path> getCorrespondingFiles(Path path) {
         assert (this != CheckpointInstance.MAX_VALUE) : "Can't get files for CheckpointVersion.MaxValue.";
         return numParts
             .map(parts -> FileNames.checkpointFileWithParts(path, version, parts))
@@ -46,5 +47,13 @@ public class CheckpointInstance implements Ordered<CheckpointInstance> {
             // we need to guard against overflow. We just can't return (this - that).toInt
             return version - that.version < 0 ? -1 : 1;
         }
+    }
+
+    @Override
+    public String toString() {
+        return "CheckpointInstance{" +
+            "version=" + version +
+            ", numParts=" + numParts +
+            '}';
     }
 }

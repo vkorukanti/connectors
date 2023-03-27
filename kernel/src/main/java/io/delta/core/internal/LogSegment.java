@@ -4,9 +4,10 @@ import java.util.List;
 import java.util.Optional;
 
 import io.delta.core.fs.FileStatus;
+import io.delta.core.fs.Path;
 
 public class LogSegment {
-    public final String logPath;
+    public final Path logPath;
     public final long version;
     public final List<FileStatus> deltas;
     public final List<FileStatus> checkpoints;
@@ -28,7 +29,7 @@ public class LogSegment {
      *                            this segment.
      */
     public LogSegment(
-            String logPath,
+            Path logPath,
             long version,
             List<FileStatus> deltas,
             List<FileStatus> checkpoints,

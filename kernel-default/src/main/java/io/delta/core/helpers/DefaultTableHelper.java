@@ -34,7 +34,6 @@ public class DefaultTableHelper implements TableHelper {
 
     @Override
     public CloseableIterator<FileStatus> listFiles(String path) {
-        System.out.println("Scott > DefaultTableHelper > listFiles :: path " + path);
         return new CloseableIterator<FileStatus>() {
             private final Iterator<org.apache.hadoop.fs.FileStatus> iter;
 
@@ -55,12 +54,9 @@ public class DefaultTableHelper implements TableHelper {
             public FileStatus next() {
                 return new FileStatus() {
                     final org.apache.hadoop.fs.FileStatus impl = iter.next();
-                    {
-                        System.out.println("listFiles > next :: " + impl.getPath());
-                    }
 
                     @Override
-                    public String path() {
+                    public String pathStr() {
                         return impl.getPath().toString();
                     }
 

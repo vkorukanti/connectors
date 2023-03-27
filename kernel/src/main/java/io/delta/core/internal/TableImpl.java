@@ -1,5 +1,7 @@
 package io.delta.core.internal;
 
+import java.net.URI;
+import java.nio.file.Paths;
 import java.util.concurrent.Callable;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -7,18 +9,25 @@ import io.delta.core.Snapshot;
 import io.delta.core.Table;
 import io.delta.core.helpers.TableHelper;
 import io.delta.core.internal.checkpoint.Checkpointer;
+import io.delta.core.fs.Path;
 import io.delta.core.internal.snapshot.SnapshotManager;
+import io.delta.core.internal.util.Logging;
 
-public class TableImpl implements Table {
+public class TableImpl implements Table, Logging {
 
     public static Table forPath(String path, TableHelper helper) {
-        final String logPath = path + "/_delta_log"; // TODO: FileUtils, makeQualified, etc.
+        // TODO: take in a configuration and use conf.get("fs.defaultFS")
+        final URI defaultUri = URI.create("file:///");
+        final Path workingDir = new Path(Paths.get(".").toAbsolutePath().toUri());
 
-        return new TableImpl(logPath, path, helper);
+        final Path dataPath = new Path(path).makeQualified(defaultUri, workingDir);
+        final Path logPath = new Path(dataPath, "_delta_log");
+
+        return new TableImpl(logPath, dataPath, helper);
     }
 
-    public final String logPath;
-    public final String dataPath;
+    public final Path logPath;
+    public final Path dataPath;
     public final TableHelper tableHelper;
     public final Checkpointer checkpointer;
     public final SnapshotManager snapshotManager;
@@ -26,9 +35,13 @@ public class TableImpl implements Table {
     private final ReentrantLock lock;
 
     public TableImpl(
-            String logPath,
-            String dataPath,
+            Path logPath,
+            Path dataPath,
             TableHelper tableHelper) {
+        logDebug(
+            String.format("TableImpl created with logPath %s, dataPath %s", logPath, dataPath)
+        );
+
         this.logPath = logPath;
         this.dataPath = dataPath;
         this.tableHelper = tableHelper;

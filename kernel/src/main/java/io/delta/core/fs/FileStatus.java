@@ -2,7 +2,11 @@ package io.delta.core.fs;
 
 public interface FileStatus {
 
-    String path();
+    default Path path() {
+        return new Path(pathStr());
+    }
+
+    String pathStr();
 
     long length();
 
