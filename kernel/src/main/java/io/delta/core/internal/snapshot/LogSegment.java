@@ -1,4 +1,4 @@
-package io.delta.core.internal;
+package io.delta.core.internal.snapshot;
 
 import java.util.List;
 import java.util.Optional;

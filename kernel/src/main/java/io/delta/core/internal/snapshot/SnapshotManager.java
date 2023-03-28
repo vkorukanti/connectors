@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 import io.delta.core.Snapshot;
 import io.delta.core.fs.FileStatus;
 import io.delta.core.fs.Path;
-import io.delta.core.internal.LogSegment;
+import io.delta.core.internal.snapshot.LogSegment;
 import io.delta.core.internal.TableImpl;
 import io.delta.core.internal.checkpoint.CheckpointInstance;
 import io.delta.core.internal.checkpoint.CheckpointMetaData;
@@ -128,23 +128,23 @@ public class SnapshotManager implements Logging {
         return listFromOrNone(startVersion).map(fileStatusesIter -> {
             final List<FileStatus> output = new ArrayList<>();
 
-            while(fileStatusesIter.hasNext()) {
+            while (fileStatusesIter.hasNext()) {
                 final FileStatus fileStatus = fileStatusesIter.next();
 
                 // Pick up all checkpoint and delta files
-                if (!isDeltaCommitOrCheckpointFile(fileStatus.path())) {
+                if (!isDeltaCommitOrCheckpointFile(fileStatus.getPath())) {
                     continue;
                 }
 
                 // Checkpoint files of 0 size are invalid but may be ignored silently when read,
                 // hence we drop them so that we never pick up such checkpoints.
-                if (FileNames.isCheckpointFile(fileStatus.path()) && fileStatus.length() == 0) {
+                if (FileNames.isCheckpointFile(fileStatus.getPath()) && fileStatus.getLength() == 0) {
                     continue;
                 }
 
                 // Take files until the version we want to load
                 final boolean versionWithinRange = versionToLoad
-                    .map(v -> FileNames.getFileVersion(fileStatus.path()) <= v)
+                    .map(v -> FileNames.getFileVersion(fileStatus.getPath()) <= v)
                     .orElse(true);
 
                 if (!versionWithinRange) {
@@ -258,7 +258,7 @@ public class SnapshotManager implements Logging {
         logDebug(() ->
             String.format(
                 "newFiles: %s",
-                Arrays.toString(newFiles.stream().map(x -> x.path().getName()).toArray())
+                Arrays.toString(newFiles.stream().map(x -> x.getPath().getName()).toArray())
             )
         );
 
@@ -277,7 +277,7 @@ public class SnapshotManager implements Logging {
         Tuple2<List<FileStatus>, List<FileStatus>> checkpointsAndDeltas = ListUtils
             .partition(
                 newFiles,
-                fileStatus -> FileNames.isCheckpointFile(fileStatus.path())
+                fileStatus -> FileNames.isCheckpointFile(fileStatus.getPath())
             );
         final List<FileStatus> checkpoints = checkpointsAndDeltas._1;
         final List<FileStatus> deltas = checkpointsAndDeltas._2;
@@ -285,8 +285,8 @@ public class SnapshotManager implements Logging {
         logDebug(() ->
             String.format(
                 "\ncheckpoints: %s\ndeltas: %s",
-                Arrays.toString(checkpoints.stream().map(x -> x.path().getName()).toArray()),
-                Arrays.toString(deltas.stream().map(x -> x.path().getName()).toArray())
+                Arrays.toString(checkpoints.stream().map(x -> x.getPath().getName()).toArray()),
+                Arrays.toString(deltas.stream().map(x -> x.getPath().getName()).toArray())
             )
         );
 
@@ -297,7 +297,7 @@ public class SnapshotManager implements Logging {
 
         final List<CheckpointInstance> checkpointFiles = checkpoints
             .stream()
-            .map(f -> new CheckpointInstance(f.path()))
+            .map(f -> new CheckpointInstance(f.getPath()))
             .collect(Collectors.toList());
         logDebug(() -> String.format("checkpointFiles: %s", Arrays.toString(checkpointFiles.toArray())));
 
@@ -319,7 +319,7 @@ public class SnapshotManager implements Logging {
                     // exist at all. This code should only handle rejected incomplete checkpoints.
                     final long snapshotVersion = versionToLoadOpt.orElseGet(() -> {
                         final FileStatus lastDelta = deltas.get(deltas.size() - 1);
-                        return FileNames.deltaVersion(lastDelta.path());
+                        return FileNames.deltaVersion(lastDelta.getPath());
                     });
 
                     return getLogSegmentWithMaxExclusiveCheckpointVersion(snapshotVersion, startCheckpoint)
@@ -342,19 +342,19 @@ public class SnapshotManager implements Logging {
         // it will list all existing delta files.
         final List<FileStatus> deltasAfterCheckpoint = deltas
             .stream()
-            .filter(fileStatus -> FileNames.deltaVersion(fileStatus.path()) > newCheckpointVersion)
+            .filter(fileStatus -> FileNames.deltaVersion(fileStatus.getPath()) > newCheckpointVersion)
             .collect(Collectors.toList());
 
         logDebug(() ->
             String.format(
                 "deltasAfterCheckpoint: %s",
-                Arrays.toString(deltasAfterCheckpoint.stream().map(x -> x.path().getName()).toArray())
+                Arrays.toString(deltasAfterCheckpoint.stream().map(x -> x.getPath().getName()).toArray())
             )
         );
 
         final LinkedList<Long> deltaVersions = deltasAfterCheckpoint
             .stream()
-            .map(fileStatus -> FileNames.deltaVersion(fileStatus.path()))
+            .map(fileStatus -> FileNames.deltaVersion(fileStatus.getPath()))
             .collect(Collectors.toCollection(LinkedList::new));
 
         logDebug(() -> String.format("deltaVersions: %s", Arrays.toString(deltaVersions.toArray())));
@@ -391,14 +391,14 @@ public class SnapshotManager implements Logging {
             );
         }
 
-        final long lastCommitTimestamp = deltas.get(deltas.size() - 1).modificationTime();
+        final long lastCommitTimestamp = deltas.get(deltas.size() - 1).getModificationTime();
 
         final List<FileStatus> newCheckpointFiles = newCheckpointOpt.map(newCheckpoint -> {
            final Set<Path> newCheckpointPaths =
                new HashSet<>(newCheckpoint.getCorrespondingFiles(tableImpl.logPath));
            final List<FileStatus> newCheckpointFileList = checkpoints
                .stream()
-               .filter(f -> newCheckpointPaths.contains(f.path()))
+               .filter(f -> newCheckpointPaths.contains(f.getPath()))
                .collect(Collectors.toList());
            assert (newCheckpointFileList.size() == newCheckpointPaths.size()) :
                String.format(
@@ -406,7 +406,7 @@ public class SnapshotManager implements Logging {
                    newCheckpointPaths.stream().map(Path::toString).collect(Collectors.toList()),
                    checkpoints
                        .stream()
-                       .map(FileStatus::path)
+                       .map(FileStatus::getPath)
                        .map(Path::toString)
                        .collect(Collectors.joining("\n - "))
                );

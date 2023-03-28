@@ -16,7 +16,7 @@ public interface TableHelper {
     CloseableIterator<Row> readJsonFile(String path, StructType readSchema) throws FileNotFoundException;
 
     /** Uses the readSchema for partition pruning. */
-    CloseableIterator<Row> readParquetFile(String path, StructType readSchema);
+    CloseableIterator<Row> readParquetFile(String path, StructType readSchema) throws FileNotFoundException;
 
     /** Uses the readSchema for partition pruning and the skippingFilter for data filtering. */
     CloseableIterator<Row> readParquetFile(

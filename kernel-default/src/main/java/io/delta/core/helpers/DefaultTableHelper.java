@@ -52,24 +52,26 @@ public class DefaultTableHelper implements TableHelper {
 
             @Override
             public FileStatus next() {
-                return new FileStatus() {
-                    final org.apache.hadoop.fs.FileStatus impl = iter.next();
-
-                    @Override
-                    public String pathStr() {
-                        return impl.getPath().toString();
-                    }
-
-                    @Override
-                    public long length() {
-                        return impl.getLen();
-                    }
-
-                    @Override
-                    public long modificationTime() {
-                        return impl.getModificationTime();
-                    }
-                };
+                final org.apache.hadoop.fs.FileStatus impl = iter.next();
+                return new FileStatus(impl.getPath().toString(), impl.getLen(), impl.getModificationTime());
+//                return new FileStatus() {
+//                    final org.apache.hadoop.fs.FileStatus impl = iter.next();
+//
+//                    @Override
+//                    public String pathStr() {
+//                        return impl.getPath().toString();
+//                    }
+//
+//                    @Override
+//                    public long length() {
+//                        return impl.getLen();
+//                    }
+//
+//                    @Override
+//                    public long modificationTime() {
+//                        return impl.getModificationTime();
+//                    }
+//                };
             }
 
             @Override
