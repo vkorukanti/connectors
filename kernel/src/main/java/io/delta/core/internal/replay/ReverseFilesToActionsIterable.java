@@ -38,14 +38,15 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Action> 
             public boolean hasNext() {
                 tryEnsureNextActionsIterIsReady();
 
+                // By definition of tryEnsureNextActionsIterIsReady, we know that if actionsIter
+                // is non-empty then it has a next element
+
                 return actionsIter.isPresent();
             }
 
             @Override
             public Action next() {
-                if (!hasNext()) {
-                    throw new NoSuchElementException();
-                }
+                if (!hasNext()) throw new NoSuchElementException();
 
                 // By the definition of hasNext, we know that actionsIter is non-empty
 
@@ -64,13 +65,18 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Action> 
              * If the current `actionsIter` has no more elements, this function finds the next non-empty
              * file in `filesIter` and uses it to set `actionsIter`.
              */
-            private void tryEnsureNextActionsIterIsReady() throws IOException {
+            private void tryEnsureNextActionsIterIsReady() {
                 if (actionsIter.isPresent()) {
                     // This iterator already has a next element, so we can exit early;
                     if (actionsIter.get().hasNext()) return;
 
                     // Clean up resources
-                    actionsIter.get().close();
+                    try {
+                        actionsIter.get().close();
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
+
 
                     // Set this to empty since we don't know if there's a next file yet
                     actionsIter = Optional.empty();
@@ -83,7 +89,11 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Action> 
                     if (actionsIter.get().hasNext()) return;
 
                     // It was an empty file.// Clean up resources
-                    actionsIter.get().close();
+                    try {
+                        actionsIter.get().close();
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
+                    }
 
                     // Set this to empty since we don't know if there's a next file yet
                     actionsIter = Optional.empty();

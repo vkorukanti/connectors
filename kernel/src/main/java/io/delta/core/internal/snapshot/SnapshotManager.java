@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 import io.delta.core.Snapshot;
 import io.delta.core.fs.FileStatus;
 import io.delta.core.fs.Path;
-import io.delta.core.internal.snapshot.LogSegment;
+import io.delta.core.internal.SnapshotImpl;
 import io.delta.core.internal.TableImpl;
 import io.delta.core.internal.checkpoint.CheckpointInstance;
 import io.delta.core.internal.checkpoint.CheckpointMetaData;

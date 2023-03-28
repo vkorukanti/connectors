@@ -1,6 +1,8 @@
 package io.delta.core.internal.replay;
 
 import java.io.IOException;
+import java.net.URI;
+import java.util.HashMap;
 import java.util.stream.Stream;
 
 import io.delta.core.fs.FileStatus;
@@ -15,13 +17,11 @@ import io.delta.core.utils.CloseableIterator;
 
 public class LogReplay {
 
-    private final TableHelper tableHelper;
     private final LogSegment logSegment;
     private final CloseableIterable<Action> reverseActionsIterable;
     private final Lazy<Tuple2<Protocol, Metadata>> protocolAndMetadata;
 
     public LogReplay(Path logPath, TableHelper tableHelper, LogSegment logSegment) {
-        this.tableHelper = tableHelper;
         this.logSegment = logSegment;
 
         final Stream<FileStatus> allFiles = Stream.concat(logSegment.checkpoints.stream(), logSegment.deltas.stream());
@@ -35,16 +35,13 @@ public class LogReplay {
     // Public APIs //
     /////////////////
 
-    public CloseableIterator<Action> getAddFiles() {
-
+    public Lazy<Tuple2<Protocol, Metadata>> lazyLoadProtocolAndMetadata() {
+        return this.protocolAndMetadata;
     }
 
-    public Protocol getProtocol() {
-        return protocolAndMetadata.get()._1;
-    }
-
-    public Metadata getMetadata() {
-        return protocolAndMetadata.get()._2;
+    public CloseableIterator<AddFile> getAddFiles() {
+        final CloseableIterator<Action> reverseActionsIter = reverseActionsIterable.iterator();
+        return new ReverseActionsToAddFilesIterator(reverseActionsIter);
     }
 
     /////////////////////
@@ -98,5 +95,4 @@ public class LogReplay {
     private void assertLogFilesBelongToTable(Path logPath, Stream<FileStatus> allFiles) {
         // TODO:
     }
-
 }

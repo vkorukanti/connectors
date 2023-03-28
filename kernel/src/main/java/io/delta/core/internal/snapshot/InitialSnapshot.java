@@ -1,5 +1,7 @@
 package io.delta.core.internal.snapshot;
 
+import io.delta.core.internal.SnapshotImpl;
+
 public class InitialSnapshot extends SnapshotImpl {
     public InitialSnapshot() {
         // TODO

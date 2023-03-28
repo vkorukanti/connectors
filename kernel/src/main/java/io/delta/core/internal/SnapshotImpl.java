@@ -1,11 +1,16 @@
-package io.delta.core.internal.snapshot;
+package io.delta.core.internal;
 
 import io.delta.core.ScanBuilder;
 import io.delta.core.Snapshot;
 import io.delta.core.fs.Path;
 import io.delta.core.internal.LogSegment;
 import io.delta.core.internal.TableImpl;
+import io.delta.core.internal.actions.Metadata;
+import io.delta.core.internal.actions.Protocol;
+import io.delta.core.internal.lang.Lazy;
+import io.delta.core.internal.lang.Tuple2;
 import io.delta.core.internal.replay.LogReplay;
+import io.delta.core.internal.snapshot.LogSegment;
 import io.delta.core.types.StructType;
 
 public class SnapshotImpl implements Snapshot {
@@ -16,6 +21,7 @@ public class SnapshotImpl implements Snapshot {
     private final long timestamp;
 
     private final LogReplay logReplay;
+    private final Lazy<Tuple2<Protocol, Metadata>> protocolAndMetadata;
 
     public SnapshotImpl(
             Path logPath,
@@ -30,7 +36,7 @@ public class SnapshotImpl implements Snapshot {
         this.timestamp = timestamp;
 
         this.logReplay = new LogReplay(logPath, tableImpl.tableHelper, logSegment);
-
+        this.protocolAndMetadata = logReplay.lazyLoadProtocolAndMetadata();
     }
 
     @Override
@@ -40,11 +46,11 @@ public class SnapshotImpl implements Snapshot {
 
     @Override
     public StructType getSchema() {
-        return null;
+        return protocolAndMetadata.get()._2.getSchema();
     }
 
     @Override
     public ScanBuilder getScanBuilder() {
-        return null;
+        return new ScanBuilderImpl(logReplay);
     }
 }
