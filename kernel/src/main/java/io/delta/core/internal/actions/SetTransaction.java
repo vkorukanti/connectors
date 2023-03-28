@@ -3,17 +3,13 @@ package io.delta.core.internal.actions;
 import io.delta.core.data.Row;
 import io.delta.core.types.StructType;
 
-public class Metadata implements Action {
+public class SetTransaction implements Action {
 
-    public static Metadata fromRow(Row row) {
+    public static SetTransaction fromRow(Row row) {
         if (row == null) return null;
 
-        return new Metadata();
+        return new SetTransaction();
     }
 
     public static final StructType READ_SCHEMA = new StructType();
-
-    public StructType getSchema() {
-        return null;
-    }
 }

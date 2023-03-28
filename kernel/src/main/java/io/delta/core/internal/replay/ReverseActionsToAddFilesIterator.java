@@ -3,7 +3,6 @@ package io.delta.core.internal.replay;
 import java.io.IOException;
 import java.net.URI;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -34,6 +33,7 @@ public class ReverseActionsToAddFilesIterator implements CloseableIterator<AddFi
         this.reverseActionIter = reverseActionIter;
         this.tombstones = new HashMap<>();
         this.alreadyReturnedFiles = new HashMap<>();
+        this.nextValid = Optional.empty();
     }
 
     @Override

@@ -3,8 +3,6 @@ package io.delta.core.internal;
 import io.delta.core.ScanBuilder;
 import io.delta.core.Snapshot;
 import io.delta.core.fs.Path;
-import io.delta.core.internal.LogSegment;
-import io.delta.core.internal.TableImpl;
 import io.delta.core.internal.actions.Metadata;
 import io.delta.core.internal.actions.Protocol;
 import io.delta.core.internal.lang.Lazy;

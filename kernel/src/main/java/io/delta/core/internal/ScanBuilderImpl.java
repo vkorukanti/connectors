@@ -26,6 +26,6 @@ public class ScanBuilderImpl implements ScanBuilder {
 
     @Override
     public Scan build() {
-        return null;
+        return new ScanImpl(logReplay);
     }
 }

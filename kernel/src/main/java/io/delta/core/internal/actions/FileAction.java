@@ -27,6 +27,14 @@ public abstract class FileAction implements Action {
         this.pathAsPath = new Lazy<>(() -> new Path(path));
     }
 
+    public String getPath() {
+        return path;
+    }
+
+    public boolean isDataChange() {
+        return dataChange;
+    }
+
     public URI toURI() {
         return pathAsUri.get();
     }

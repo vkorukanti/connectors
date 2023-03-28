@@ -37,4 +37,17 @@ class TableSuite extends AnyFunSuite with GoldenTableUtils {
       assert(snapshot.getVersion === 8)
     }
   }
+
+  test("can create scan tasks - without a checkpoint") {
+    withGoldenTable("basic-no-checkpoint") { path =>
+      val table = Table.forPath(path, new DefaultTableHelper())
+      val snapshot = table.getLatestSnapshot
+      val aa = snapshot.getScanBuilder()
+      val bb = aa.build()
+      val cc = bb.getTasks
+      while (cc.hasNext) {
+        val dd = cc.next()
+      }
+    }
+  }
 }

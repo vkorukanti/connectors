@@ -170,7 +170,7 @@ public class SnapshotManager implements Logging {
         final Optional<LogSegment> logSegmentOpt = getLogSegmentFrom(lastCheckpointOpt);
         return logSegmentOpt
             .map(logSegment -> createSnapshot(logSegment, lastCheckpointOpt, Optional.empty()))
-            .orElse(new InitialSnapshot());
+            .orElse(new InitialSnapshot(tableImpl.logPath, tableImpl));
     }
 
     private SnapshotImpl createSnapshot(

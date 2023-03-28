@@ -26,7 +26,7 @@ public interface Row {
 //
 //    BigDecimal getDecimal(int ordinal, int precision, int scale);
 //
-//    String getString(int ordinal);
+    String getString(int ordinal);
 //
 //    byte[] getBinary(int ordinal);
 //
@@ -34,7 +34,7 @@ public interface Row {
 //
 //    Date getDate(int ordinal);
 //
-//    Row getRecord(int ordinal);
+    Row getRecord(int ordinal);
 //
 //    <T> List<T> getList(int ordinal);
 //

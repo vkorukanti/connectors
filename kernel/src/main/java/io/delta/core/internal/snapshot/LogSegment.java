@@ -1,5 +1,6 @@
 package io.delta.core.internal.snapshot;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,6 +14,17 @@ public class LogSegment {
     public final List<FileStatus> checkpoints;
     public final Optional<Long> checkpointVersionOpt;
     public final long lastCommitTimestamp;
+
+    public static LogSegment empty(Path logPath) {
+        return new LogSegment(
+            logPath,
+            -1,
+            Collections.emptyList(),
+            Collections.emptyList(),
+            Optional.empty(),
+            -1
+        );
+    }
 
     /**
      * Provides information around which files in the transaction log need to be read to create
