@@ -18,7 +18,7 @@ import io.delta.core.utils.CloseableIterator;
 public class LogReplay {
 
     private final LogSegment logSegment;
-    private final CloseableIterable<Action> reverseActionsIterable;
+    private final CloseableIterable<Tuple2<Action, Boolean>> reverseActionsIterable;
     private final Lazy<Tuple2<Protocol, Metadata>> protocolAndMetadata;
 
     public LogReplay(Path logPath, TableHelper tableHelper, LogSegment logSegment) {
@@ -40,7 +40,7 @@ public class LogReplay {
     }
 
     public CloseableIterator<AddFile> getAddFiles() {
-        final CloseableIterator<Action> reverseActionsIter = reverseActionsIterable.iterator();
+        final CloseableIterator<Tuple2<Action, Boolean>> reverseActionsIter = reverseActionsIterable.iterator();
         return new ReverseActionsToAddFilesIterator(reverseActionsIter);
     }
 
@@ -52,16 +52,16 @@ public class LogReplay {
         Protocol protocol = null;
         Metadata metadata = null;
 
-        try (final CloseableIterator<Action> reverseIter = reverseActionsIterable.iterator()) {
+        try (final CloseableIterator<Tuple2<Action, Boolean>> reverseIter = reverseActionsIterable.iterator()) {
             while (reverseIter.hasNext()) {
-                final Action action = reverseIter.next();
+                final Action action = reverseIter.next()._1;
 
                 if (action instanceof Protocol && protocol == null) {
                     // We only need the latest protocol
                     protocol = (Protocol) action;
 
                     if (metadata != null) {
-                        // Stop since we have found the latest Protocol and <etadata.
+                        // Stop since we have found the latest Protocol and Metadata.
                         return new Tuple2<>(protocol, metadata);
                     }
                 } else if (action instanceof Metadata && metadata == null) {

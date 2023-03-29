@@ -14,25 +14,18 @@ import io.delta.core.utils.CloseableIterator;
 
 public class ReverseActionsToAddFilesIterator implements CloseableIterator<AddFile> {
 
-    private final CloseableIterator<Action> reverseActionIter;
+    private final CloseableIterator<Tuple2<Action, Boolean>> reverseActionIter;
 
-    // TODO: Minor performance optimization. check if the remove file is from a checkpoint. If it is
-    // we can also exclude it, since there will be no AddFile for the same key in the checkpoint
-    private HashMap<UniqueFileActionTuple, RemoveFile> tombstones;
+    private HashMap<UniqueFileActionTuple, RemoveFile> tombstonesFromJson;
 
-    // TODO: Minor Performance optimization. check if the add file is from a checkpoint. If it's from a checkpoint, don't add it
-    // to this map since
-    // - if this is from a checkpoint, ths is the last file we will iterate over (why would we
-    //   include the log file before a checkpoint?)
-    // - if this is from a checkpoint, there won't be the same AddFile twice
-    private HashMap<UniqueFileActionTuple, AddFile> alreadyReturnedFiles;
+    private HashMap<UniqueFileActionTuple, AddFile> addFilesFromJson;
 
     private Optional<AddFile> nextValid;
 
-    public ReverseActionsToAddFilesIterator(CloseableIterator<Action> reverseActionIter) {
+    public ReverseActionsToAddFilesIterator(CloseableIterator<Tuple2<Action, Boolean>> reverseActionIter) {
         this.reverseActionIter = reverseActionIter;
-        this.tombstones = new HashMap<>();
-        this.alreadyReturnedFiles = new HashMap<>();
+        this.tombstonesFromJson = new HashMap<>();
+        this.addFilesFromJson = new HashMap<>();
         this.nextValid = Optional.empty();
     }
 
@@ -63,31 +56,37 @@ public class ReverseActionsToAddFilesIterator implements CloseableIterator<AddFi
 
     private Optional<AddFile> findNextValid() {
         while (reverseActionIter.hasNext()) {
-            final Action action = reverseActionIter.next();
+            final Tuple2<Action, Boolean> tuple = reverseActionIter.next();
+            final Action action = tuple._1;
+            final boolean isFromCheckpoint = tuple._2;
 
             if (action instanceof AddFile) {
                 final AddFile add = ((AddFile) action).copyWithDataChange(false);
                 final UniqueFileActionTuple key =
                     new UniqueFileActionTuple(add.toURI(), add.getDeletionVectorUniqueId());
-                final boolean alreadyDeleted = tombstones.containsKey(key);
-                final boolean alreadyReturned = alreadyReturnedFiles.containsKey(key);
+                final boolean alreadyDeleted = tombstonesFromJson.containsKey(key);
+                final boolean alreadyReturned = addFilesFromJson.containsKey(key);
 
                 if (!alreadyReturned) {
-                    // TODO: checkpoint optimization
-
-                    alreadyReturnedFiles.put(key, add);
+                    // Note: No AddFile will appear twice in a checkpoint, so we only need
+                    //       non-checkpoint AddFiles in the set
+                    if (!isFromCheckpoint) {
+                        addFilesFromJson.put(key, add);
+                    }
 
                     if (!alreadyDeleted) {
                         return Optional.of(add);
                     }
                 }
-            } else if (action instanceof RemoveFile) {
+            } else if (action instanceof RemoveFile && !isFromCheckpoint) {
+                // Note: There's no reason to put a RemoveFile from a checkpoint into tombstones map
+                //       since, when we generate a checkpoint, any corresponding AddFile would have
+                //       been excluded
                 final RemoveFile remove = ((RemoveFile) action).copyWithDataChange(false);
                 final UniqueFileActionTuple key =
                     new UniqueFileActionTuple(remove.toURI(), remove.getDeletionVectorUniqueId());
 
-                // TODO: checkpoint optimization
-                tombstones.put(key, remove);
+                tombstonesFromJson.put(key, remove);
             }
         }
 

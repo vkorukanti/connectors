@@ -13,9 +13,10 @@ import io.delta.core.helpers.TableHelper;
 import io.delta.core.internal.actions.Action;
 import io.delta.core.internal.actions.SingleAction;
 import io.delta.core.internal.lang.CloseableIterable;
+import io.delta.core.internal.lang.Tuple2;
 import io.delta.core.utils.CloseableIterator;
 
-public class ReverseFilesToActionsIterable implements CloseableIterable<Action> {
+public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<Action, Boolean>> {
 
     private final TableHelper tableHelper;
     private final List<FileStatus> reverseSortedFiles;
@@ -28,10 +29,10 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Action> 
     }
 
     @Override
-    public CloseableIterator<Action> iterator() {
-        return new CloseableIterator<Action>() {
+    public CloseableIterator<Tuple2<Action, Boolean>> iterator() {
+        return new CloseableIterator<Tuple2<Action, Boolean>>() {
             private final Iterator<FileStatus> filesIter = reverseSortedFiles.iterator();
-            private Optional<CloseableIterator<Action>> actionsIter = Optional.empty();
+            private Optional<CloseableIterator<Tuple2<Action, Boolean>>> actionsIter = Optional.empty();
 
             @Override
             public boolean hasNext() {
@@ -44,7 +45,7 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Action> 
             }
 
             @Override
-            public Action next() {
+            public Tuple2<Action, Boolean> next() {
                 if (!hasNext()) throw new NoSuchElementException();
 
                 // By the definition of hasNext, we know that actionsIter is non-empty
@@ -102,19 +103,21 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Action> 
             /**
              * Requires that `filesIter.hasNext` is true
              */
-            private CloseableIterator<Action> getNextActionsIter() {
+            private CloseableIterator<Tuple2<Action, Boolean>> getNextActionsIter() {
                 final Path nextPath = filesIter.next().getPath();
 
                 try {
                     if (nextPath.getName().endsWith(".json")) {
                         System.out.println("Scott > ReverseFilesToActionsIterable > reading " + nextPath.getName());
                         return new RowToActionIterator(
-                            tableHelper.readJsonFile(nextPath.toString(), SingleAction.READ_SCHEMA)
+                            tableHelper.readJsonFile(nextPath.toString(), SingleAction.READ_SCHEMA),
+                            false // isFromCheckpoint
                         );
                     } else if (nextPath.getName().endsWith(".parquet")) {
                         System.out.println("Scott > ReverseFilesToActionsIterable > reading " + nextPath.getName());
                         return new RowToActionIterator(
-                            tableHelper.readParquetFile(nextPath.toString(), SingleAction.READ_SCHEMA)
+                            tableHelper.readParquetFile(nextPath.toString(), SingleAction.READ_SCHEMA),
+                            true // isFromCheckpoint
                         );
                     } else {
                         throw new IllegalStateException(
@@ -128,12 +131,14 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Action> 
         };
     }
 
-    private static class RowToActionIterator implements CloseableIterator<Action> {
+    private static class RowToActionIterator implements CloseableIterator<Tuple2<Action, Boolean>> {
         private final CloseableIterator<Row> impl;
+        private final boolean isFromCheckpoint;
 
         /** Requires that Row represents a SingleAction. */
-        public RowToActionIterator(CloseableIterator<Row> impl) {
+        public RowToActionIterator(CloseableIterator<Row> impl, boolean isFromCheckpoint) {
             this.impl = impl;
+            this.isFromCheckpoint = isFromCheckpoint;
         }
 
         @Override
@@ -142,8 +147,8 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Action> 
         }
 
         @Override
-        public Action next() {
-            return SingleAction.fromRow(impl.next()).unwrap();
+        public Tuple2<Action, Boolean> next() {
+            return new Tuple2<>(SingleAction.fromRow(impl.next()).unwrap(), isFromCheckpoint);
         }
 
         @Override
