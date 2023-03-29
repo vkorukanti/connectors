@@ -131,7 +131,7 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
         };
     }
 
-    private static class RowToActionIterator implements CloseableIterator<Tuple2<Action, Boolean>> {
+    private class RowToActionIterator implements CloseableIterator<Tuple2<Action, Boolean>> {
         private final CloseableIterator<Row> impl;
         private final boolean isFromCheckpoint;
 
@@ -148,7 +148,10 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
 
         @Override
         public Tuple2<Action, Boolean> next() {
-            return new Tuple2<>(SingleAction.fromRow(impl.next()).unwrap(), isFromCheckpoint);
+            return new Tuple2<>(
+                SingleAction.fromRow(impl.next(), tableHelper).unwrap(),
+                isFromCheckpoint
+            );
         }
 
         @Override

@@ -130,7 +130,12 @@ public class DefaultTableHelper implements TableHelper {
     }
 
     @Override
-    public Row parseStats(String statsJson) {
+    public Row parseStats(String statsJson, StructType statsSchema) {
+        return null;
+    }
+
+    @Override
+    public StructType parseSchema(String schemaJson) {
         return null;
     }
 

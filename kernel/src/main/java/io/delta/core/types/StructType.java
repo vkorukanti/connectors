@@ -6,6 +6,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public final class StructType extends DataType {
+
+    public static StructType READ_SCHEMA = new StructType()
+        .add("fields", new ArrayType(StructField.READ_SCHEMA, false /* contains null */ ));
+
     private final List<StructField> fields;
 
     public StructType() {

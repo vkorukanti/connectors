@@ -66,4 +66,8 @@ class GoldenTablesGenerator extends QueryTest with SharedSparkSession {
       spark.range(low, high).write.format("delta").mode("append").save(path)
     }
   }
+
+  generate("primitive-data-types") { path =>
+
+  }
 }

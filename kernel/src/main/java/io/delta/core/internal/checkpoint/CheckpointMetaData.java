@@ -14,8 +14,8 @@ public class CheckpointMetaData {
     }
 
     public static StructType READ_SCHEMA = new StructType()
-        .add("version", new LongType())
-        .add("size", new LongType());
+        .add("version", LongType.INSTANCE)
+        .add("size", LongType.INSTANCE);
 
     public final long version;
     public final long size;

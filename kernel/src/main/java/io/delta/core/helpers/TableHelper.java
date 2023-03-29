@@ -24,7 +24,9 @@ public interface TableHelper {
         StructType readSchema,
         Expression skippingFilter);
 
-    Row parseStats(String statsJson);
+    Row parseStats(String statsJson, StructType statsSchema);
+
+    StructType parseSchema(String schemaJson);
 
     ScanHelper getScanHelper();
 }

@@ -45,7 +45,7 @@ public class JsonRow implements Row {
         }
 
         throw new UnsupportedOperationException(
-            String.format("Unsupported DataType %s", field.dataType.typeName())
+            String.format("Unsupported DataType %s for RootNode %s", field.dataType.typeName(), jsonValue)
         );
     }
 
@@ -67,23 +67,28 @@ public class JsonRow implements Row {
 
     @Override
     public long getLong(int ordinal) {
-        assert (readSchema.at(ordinal).dataType instanceof LongType);
+        if (!(readSchema.at(ordinal).dataType instanceof LongType)) {
+            throw new RuntimeException();
+        }
         return (long) ordinalToValueMap.get(ordinal);
     }
 
     @Override
     public String getString(int ordinal) {
-        assert (readSchema.at(ordinal).dataType instanceof StringType);
-
+        if (!(readSchema.at(ordinal).dataType instanceof StringType)) {
+            throw new RuntimeException();
+        }
         return (String) ordinalToValueMap.get(ordinal);
     }
 
     @Override
     public Row getRecord(int ordinal) {
-        assert (readSchema.at(ordinal).dataType instanceof StructType);
+        if (!(readSchema.at(ordinal).dataType instanceof StructType)) {
+            throw new RuntimeException();
+        }
 
         if (ordinalToValueMap.get(ordinal) == null) return null;
-
+        System.out.println("Trying to parse inner record: " + ordinalToValueMap.get(ordinal));
         return new JsonRow(
             (ObjectNode) ordinalToValueMap.get(ordinal),
             (StructType) readSchema.at(ordinal).dataType

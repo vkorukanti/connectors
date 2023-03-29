@@ -1,11 +1,12 @@
 package io.delta.core.internal.actions;
 
 import io.delta.core.data.Row;
+import io.delta.core.helpers.TableHelper;
 import io.delta.core.types.StructType;
 
 public class SingleAction {
 
-    public static SingleAction fromRow(Row row) {
+    public static SingleAction fromRow(Row row, TableHelper tableHelper) {
         final SetTransaction txn = SetTransaction.fromRow(row.getRecord(0));
         if (txn != null) {
             return new SingleAction(txn, null, null, null, null, null, null);
@@ -21,7 +22,7 @@ public class SingleAction {
             return new SingleAction(null, null, remove, null, null, null, null);
         }
 
-        final Metadata metadata = Metadata.fromRow(row.getRecord(3));
+        final Metadata metadata = Metadata.fromRow(row.getRecord(3), tableHelper);
         if (metadata != null) {
             return new SingleAction(null, null, null, metadata, null, null, null);
         }

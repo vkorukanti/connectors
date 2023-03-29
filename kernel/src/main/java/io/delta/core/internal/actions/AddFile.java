@@ -15,7 +15,7 @@ public class AddFile extends FileAction {
     }
 
     public static final StructType READ_SCHEMA = new StructType()
-        .add("path", new StringType());
+        .add("path", StringType.INSTANCE);
 
     public AddFile(String path, boolean dataChange) {
         super(path, dataChange);

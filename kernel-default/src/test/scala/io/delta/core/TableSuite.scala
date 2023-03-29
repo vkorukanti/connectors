@@ -20,6 +20,7 @@ import io.delta.core.helpers.DefaultTableHelper
 import io.delta.core.util.GoldenTableUtils
 import org.scalatest.funsuite.AnyFunSuite
 
+// scalastyle:off println
 class TableSuite extends AnyFunSuite with GoldenTableUtils {
 
   test("can load latest table version - with a checkpoint") {
@@ -52,6 +53,14 @@ class TableSuite extends AnyFunSuite with GoldenTableUtils {
       }
       assert(count === 18)
       iter.close()
+    }
+  }
+
+  test("can load table schema - table without a checkpoint") {
+    withGoldenTable("basic-no-checkpoint") { path =>
+      val table = Table.forPath(path, new DefaultTableHelper())
+      val snapshot = table.getLatestSnapshot
+      println(snapshot.getSchema)
     }
   }
 }
