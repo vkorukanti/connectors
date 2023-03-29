@@ -1,4 +1,4 @@
-package io.delta.core.internal.util;
+package io.delta.core.internal;
 
 import io.delta.core.ScanTask;
 import io.delta.core.data.ColumnarBatch;

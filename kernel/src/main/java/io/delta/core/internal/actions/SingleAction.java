@@ -61,7 +61,7 @@ public class SingleAction {
     private final AddCDCFile cdc;
     private final CommitInfo commitInfo;
 
-    public SingleAction(
+    private SingleAction(
             SetTransaction txn,
             AddFile add,
             RemoveFile remove,

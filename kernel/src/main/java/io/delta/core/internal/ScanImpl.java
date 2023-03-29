@@ -6,7 +6,6 @@ import io.delta.core.Scan;
 import io.delta.core.ScanTask;
 import io.delta.core.internal.actions.AddFile;
 import io.delta.core.internal.replay.LogReplay;
-import io.delta.core.internal.util.ScanTaskImpl;
 import io.delta.core.utils.CloseableIterator;
 
 public class ScanImpl implements Scan {

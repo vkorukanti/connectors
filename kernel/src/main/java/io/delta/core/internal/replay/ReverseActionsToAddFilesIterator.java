@@ -16,9 +16,9 @@ public class ReverseActionsToAddFilesIterator implements CloseableIterator<AddFi
 
     private final CloseableIterator<Tuple2<Action, Boolean>> reverseActionIter;
 
-    private HashMap<UniqueFileActionTuple, RemoveFile> tombstonesFromJson;
+    private final HashMap<UniqueFileActionTuple, RemoveFile> tombstonesFromJson;
 
-    private HashMap<UniqueFileActionTuple, AddFile> addFilesFromJson;
+    private final HashMap<UniqueFileActionTuple, AddFile> addFilesFromJson;
 
     private Optional<AddFile> nextValid;
 
