@@ -22,11 +22,11 @@ public class AddFile extends FileAction {
     }
 
     public Optional<String> getDeletionVectorUniqueId() {
-        return null;
+        return Optional.empty(); // TODO
     }
 
     @Override
     public AddFile copyWithDataChange(boolean dataChange) {
-        return null;
+        return this; // TODO
     }
 }

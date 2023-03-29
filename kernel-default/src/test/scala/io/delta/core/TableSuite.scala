@@ -42,12 +42,16 @@ class TableSuite extends AnyFunSuite with GoldenTableUtils {
     withGoldenTable("basic-no-checkpoint") { path =>
       val table = Table.forPath(path, new DefaultTableHelper())
       val snapshot = table.getLatestSnapshot
-      val aa = snapshot.getScanBuilder()
-      val bb = aa.build()
-      val cc = bb.getTasks
-      while (cc.hasNext) {
-        val dd = cc.next()
+
+      var count = 0
+      val iter = snapshot.getScanBuilder().build().getTasks()
+      while (iter.hasNext) {
+        val task = iter.next()
+        task.getData
+        count += 1
       }
+      assert(count === 18)
+      iter.close()
     }
   }
 }

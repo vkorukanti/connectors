@@ -27,7 +27,6 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Action> 
             .collect(Collectors.toList());
     }
 
-
     @Override
     public CloseableIterator<Action> iterator() {
         return new CloseableIterator<Action>() {
@@ -76,7 +75,6 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Action> 
                     } catch (IOException ex) {
                         throw new RuntimeException(ex);
                     }
-
 
                     // Set this to empty since we don't know if there's a next file yet
                     actionsIter = Optional.empty();

@@ -48,7 +48,7 @@ public class SingleAction {
         .add("txn", SetTransaction.READ_SCHEMA)
         .add("add", AddFile.READ_SCHEMA)
         .add("remove", RemoveFile.READ_SCHEMA)
-        .add("metadata", Metadata.READ_SCHEMA)
+        .add("metaData", Metadata.READ_SCHEMA)
         .add("protocol", Protocol.READ_SCHEMA)
         .add("cdc", AddCDCFile.READ_SCHEMA)
         .add("commitInfo", CommitInfo.READ_SCHEMA);

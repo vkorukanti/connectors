@@ -25,7 +25,6 @@ public class JsonRow implements Row {
         }
 
         JsonNode jsonValue = rootNode.get(field.name);
-        System.out.println("JsonRow > field " + field.name + " is NOT null " + jsonValue.toString());
 
         if (field.dataType instanceof LongType) {
             assert (jsonValue.isLong()) :
@@ -82,6 +81,9 @@ public class JsonRow implements Row {
     @Override
     public Row getRecord(int ordinal) {
         assert (readSchema.at(ordinal).dataType instanceof StructType);
+
+        if (ordinalToValueMap.get(ordinal) == null) return null;
+
         return new JsonRow(
             (ObjectNode) ordinalToValueMap.get(ordinal),
             (StructType) readSchema.at(ordinal).dataType
