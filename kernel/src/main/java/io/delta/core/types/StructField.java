@@ -3,17 +3,26 @@ package io.delta.core.types;
 import io.delta.core.data.Row;
 
 public class StructField {
-    public static final StructType READ_SCHEMA = new StructType()
-        .add("name", StringType.INSTANCE)
-        .add("type", new UnresolvedDataType())
-        .add("nullable", BooleanType.INSTANCE);
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Static Fields / Methods
+    ////////////////////////////////////////////////////////////////////////////////
 
     public static StructField fromRow(Row row) {
         final String name = row.getString(0);
-        final DataType type = UnresolvedDataType.fromRow(row.getRecord(1));
-        final boolean nullable = true; // TODO row.getBoolean(2);
+        final DataType type = UnresolvedDataType.fromRow(row, 1);
+        final boolean nullable = row.getBoolean(2);
         return new StructField(name, type, nullable);
     }
+
+    public static final StructType READ_SCHEMA = new StructType()
+        .add("name", StringType.INSTANCE)
+        .add("type", StringType.INSTANCE)
+        .add("nullable", BooleanType.INSTANCE);
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Instance Fields / Methods
+    ////////////////////////////////////////////////////////////////////////////////
 
     public final String name;
     public final DataType dataType;
@@ -24,5 +33,10 @@ public class StructField {
         this.name = name;
         this.dataType = dataType;
         this.nullable = nullable;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("StructField(%s,%s,%s)", name, dataType, nullable);
     }
 }

@@ -6,19 +6,23 @@ import io.delta.core.types.*;
 
 public class Metadata implements Action {
 
+    ////////////////////////////////////////////////////////////////////////////////
+    // Static Fields / Methods
+    ////////////////////////////////////////////////////////////////////////////////
+
     public static Metadata fromRow(Row row, TableHelper tableHelper) {
         if (row == null) return null;
-
+        final String id = row.getString(0);
+        final String name = row.getString(1);
+        final String description = row.getString(2);
+        final Format format = Format.fromRow(row.getRecord(3));
         final String schemaJson = row.getString(4);
-        StructType schema = tableHelper.parseSchema(schemaJson);
+        Row schemaRow = tableHelper.parseJson(schemaJson, StructType.READ_SCHEMA);
+        StructType schema = StructType.fromRow(schemaRow);
 
         return new Metadata(schema);
     }
 
-    /*
-    {"id":"testId","format":{"provider":"parquet","options":{}},"schemaString":"{\"type\":\"struct\",\"fields\":[{\"name\":\"id\",\"type\":\"long\",\"nullable\":true,\"metadata\":{}}]}","partitionColumns":[],"configuration":{},"createdTime":1679943453303}
-
-     */
     public static final StructType READ_SCHEMA = new StructType()
         .add("id", StringType.INSTANCE)
         .add("name", StringType.INSTANCE)
@@ -28,6 +32,10 @@ public class Metadata implements Action {
         .add("partitionColumns", new ArrayType(StringType.INSTANCE, false /* contains null */))
         .add("configuration", new MapType())
         .add("createdTime", LongType.INSTANCE);
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Instance Fields / Methods
+    ////////////////////////////////////////////////////////////////////////////////
 
     // id
     // name

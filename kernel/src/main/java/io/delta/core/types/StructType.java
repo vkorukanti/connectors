@@ -5,10 +5,32 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import io.delta.core.data.Row;
+
 public final class StructType extends DataType {
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Static Fields / Methods
+    ////////////////////////////////////////////////////////////////////////////////
+
+    public static StructType EMPTY_INSTANCE = new StructType();
+
+    public static StructType fromRow(Row row) {
+        final List<Row> fields = row.getList(0);
+        return new StructType(
+            fields
+                .stream()
+                .map(StructField::fromRow)
+                .collect(Collectors.toList())
+        );
+    }
 
     public static StructType READ_SCHEMA = new StructType()
         .add("fields", new ArrayType(StructField.READ_SCHEMA, false /* contains null */ ));
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Instance Fields / Methods
+    ////////////////////////////////////////////////////////////////////////////////
 
     private final List<StructField> fields;
 
@@ -45,6 +67,15 @@ public final class StructType extends DataType {
 
     public StructField at(int index) {
         return fields.get(index);
+    }
+
+    @Override
+    public String toString() {
+        return String.format(
+            "%s(%s)",
+            getClass().getSimpleName(),
+            fields.stream().map(StructField::toString).collect(Collectors.joining(", "))
+        );
     }
 
     public String treeString() {

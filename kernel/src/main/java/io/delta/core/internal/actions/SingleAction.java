@@ -6,38 +6,42 @@ import io.delta.core.types.StructType;
 
 public class SingleAction {
 
+    ////////////////////////////////////////////////////////////////////////////////
+    // Static Fields / Methods
+    ////////////////////////////////////////////////////////////////////////////////
+
     public static SingleAction fromRow(Row row, TableHelper tableHelper) {
-        final SetTransaction txn = SetTransaction.fromRow(row.getRecord(0));
+        final SetTransaction txn = row.isNullAt(0) ? null : SetTransaction.fromRow(row.getRecord(0));
         if (txn != null) {
             return new SingleAction(txn, null, null, null, null, null, null);
         }
 
-        final AddFile add = AddFile.fromRow(row.getRecord(1));
+        final AddFile add = row.isNullAt(1) ? null : AddFile.fromRow(row.getRecord(1));
         if (add != null) {
             return new SingleAction(null, add, null, null, null, null, null);
         }
 
-        final RemoveFile remove = RemoveFile.fromRow(row.getRecord(2));
+        final RemoveFile remove = row.isNullAt(2) ? null : RemoveFile.fromRow(row.getRecord(2));
         if (remove != null) {
             return new SingleAction(null, null, remove, null, null, null, null);
         }
 
-        final Metadata metadata = Metadata.fromRow(row.getRecord(3), tableHelper);
+        final Metadata metadata = row.isNullAt(3) ? null : Metadata.fromRow(row.getRecord(3), tableHelper);
         if (metadata != null) {
             return new SingleAction(null, null, null, metadata, null, null, null);
         }
 
-        final Protocol protocol = Protocol.fromRow(row.getRecord(4));
+        final Protocol protocol = row.isNullAt(4) ? null : Protocol.fromRow(row.getRecord(4));
         if (protocol != null) {
             return new SingleAction(null, null, null, null, protocol, null, null);
         }
 
-        final AddCDCFile cdc = AddCDCFile.fromRow(row.getRecord(5));
+        final AddCDCFile cdc = row.isNullAt(5) ? null : AddCDCFile.fromRow(row.getRecord(5));
         if (cdc != null) {
             return new SingleAction(null, null, null, null, null, cdc, null);
         }
 
-        final CommitInfo commitInfo = CommitInfo.fromRow(row.getRecord(6));
+        final CommitInfo commitInfo = row.isNullAt(6) ? null : CommitInfo.fromRow(row.getRecord(6));
         if (commitInfo != null) {
             return new SingleAction(null, null, null, null, null, null, commitInfo);
         }
@@ -53,6 +57,10 @@ public class SingleAction {
         .add("protocol", Protocol.READ_SCHEMA)
         .add("cdc", AddCDCFile.READ_SCHEMA)
         .add("commitInfo", CommitInfo.READ_SCHEMA);
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Instance Fields / Methods
+    ////////////////////////////////////////////////////////////////////////////////
 
     private final SetTransaction txn;
     private final AddFile add;
@@ -87,6 +95,7 @@ public class SingleAction {
         if (protocol != null) return protocol;
         if (cdc != null) return cdc;
         if (commitInfo != null) return commitInfo;
-        return null;
+
+        throw new IllegalStateException("SingleAction row contained no non-null actions");
     }
 }

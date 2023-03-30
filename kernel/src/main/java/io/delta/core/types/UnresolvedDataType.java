@@ -10,14 +10,18 @@ import io.delta.core.data.Row;
  */
 public class UnresolvedDataType extends DataType {
 
-    public static DataType fromRow(Row row) {
+    public static final UnresolvedDataType INSTANCE = new UnresolvedDataType();
+
+    public static DataType fromRow(Row row, int ordinal) {
         try {
-            final String typeName = row.getString(0);
-            return DataType.fromTypeName(typeName);
+            // e.g. IntegerType -> {"name":"as_int","type":"integer","nullable":true,"metadata":{}
+            // e.g. LongType -> {"name":"as_long","type":"long","nullable":true,"metadata":{}}
+            final String typeName = row.getString(ordinal);
+            return DataType.createPrimitive(typeName);
         } catch (RuntimeException ex) {
-            // TODO: parse ArrayType, etc.
-            throw new RuntimeException("TODO");
+            throw new RuntimeException("Failed to parse UnresolvedDataType");
         }
     }
 
+    private UnresolvedDataType() { }
 }

@@ -108,13 +108,11 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
 
                 try {
                     if (nextPath.getName().endsWith(".json")) {
-                        System.out.println("Scott > ReverseFilesToActionsIterable > reading " + nextPath.getName());
                         return new RowToActionIterator(
                             tableHelper.readJsonFile(nextPath.toString(), SingleAction.READ_SCHEMA),
                             false // isFromCheckpoint
                         );
                     } else if (nextPath.getName().endsWith(".parquet")) {
-                        System.out.println("Scott > ReverseFilesToActionsIterable > reading " + nextPath.getName());
                         return new RowToActionIterator(
                             tableHelper.readParquetFile(nextPath.toString(), SingleAction.READ_SCHEMA),
                             true // isFromCheckpoint

@@ -108,13 +108,7 @@ public class DefaultTableHelper implements TableHelper {
 
             @Override
             public Row next() {
-                final String json = iter.next();
-                try {
-                    final JsonNode jsonNode = objectMapper.readTree(json);
-                    return new JsonRow((ObjectNode) jsonNode, readSchema);
-                } catch (JsonProcessingException ex) {
-                    throw new RuntimeException(String.format("Could not parse JSON: %s", json), ex);
-                }
+                return parseJson(iter.next(), readSchema);
             }
         };
     }
@@ -130,13 +124,13 @@ public class DefaultTableHelper implements TableHelper {
     }
 
     @Override
-    public Row parseStats(String statsJson, StructType statsSchema) {
-        return null;
-    }
-
-    @Override
-    public StructType parseSchema(String schemaJson) {
-        return null;
+    public Row parseJson(String json, StructType readSchema) {
+        try {
+            final JsonNode jsonNode = objectMapper.readTree(json);
+            return new JsonRow((ObjectNode) jsonNode, readSchema);
+        } catch (JsonProcessingException ex) {
+            throw new RuntimeException(String.format("Could not parse JSON: %s", json), ex);
+        }
     }
 
     @Override

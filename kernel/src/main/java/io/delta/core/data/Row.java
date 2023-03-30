@@ -8,15 +8,15 @@ import java.util.Map;
 
 public interface Row {
 
-//    boolean isNullAt(int ordinal);
+    boolean isNullAt(int ordinal);
 //
-//    boolean getBoolean(int ordinal);
+    boolean getBoolean(int ordinal);
 //
 //    byte getByte(int ordinal);
 //
 //    short getShort(int ordinal);
 //
-//    int getInt(int ordinal);
+    int getInt(int ordinal);
 
     long getLong(int ordinal);
 
@@ -36,7 +36,7 @@ public interface Row {
 //
     Row getRecord(int ordinal);
 //
-//    <T> List<T> getList(int ordinal);
+    <T> List<T> getList(int ordinal);
 //
 //    <K, V> Map<K, V> getMap(int ordinal);
 }

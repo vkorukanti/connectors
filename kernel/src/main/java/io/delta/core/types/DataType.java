@@ -4,11 +4,13 @@ import java.util.Locale;
 
 public abstract class DataType {
 
-    public static DataType fromTypeName(String primitiveTypeName) {
-        if (primitiveTypeName.equals(LongType.INSTANCE.typeName())) return LongType.INSTANCE;
-        if (primitiveTypeName.equals(StringType.INSTANCE.typeName())) return StringType.INSTANCE;
+    public static DataType createPrimitive(String typeName) {
+        if (typeName.equals(LongType.INSTANCE.typeName())) return LongType.INSTANCE;
+        if (typeName.equals(StringType.INSTANCE.typeName())) return StringType.INSTANCE;
 
-        throw new IllegalArgumentException(String.format("Can't parse type %s", primitiveTypeName));
+        throw new IllegalArgumentException(
+            String.format("Can't create primitive for type type %s", typeName)
+        );
     }
 
     public String typeName() {
