@@ -17,7 +17,7 @@ public class StructField {
 
     public static final StructType READ_SCHEMA = new StructType()
         .add("name", StringType.INSTANCE)
-        .add("type", StringType.INSTANCE)
+        .add("type", UnresolvedDataType.INSTANCE)
         .add("nullable", BooleanType.INSTANCE);
 
     ////////////////////////////////////////////////////////////////////////////////

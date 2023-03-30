@@ -37,6 +37,10 @@ public class SnapshotImpl implements Snapshot {
         this.protocolAndMetadata = logReplay.lazyLoadProtocolAndMetadata();
     }
 
+    ////////////////////////////////////////
+    // Public APIs
+    ////////////////////////////////////////
+
     @Override
     public long getVersion() {
         return version;
@@ -50,5 +54,13 @@ public class SnapshotImpl implements Snapshot {
     @Override
     public ScanBuilder getScanBuilder() {
         return new ScanBuilderImpl(logReplay);
+    }
+
+    ////////////////////////////////////////
+    // Internal APIs
+    ////////////////////////////////////////
+
+    public Protocol getProtocol() {
+        return protocolAndMetadata.get()._1;
     }
 }

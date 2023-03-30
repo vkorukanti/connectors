@@ -204,8 +204,10 @@ public class JsonRow implements Row {
             !actualTypeName.equals(UnresolvedDataType.INSTANCE.typeName())) {
             throw new RuntimeException(
                 String.format(
-                    "Tried to read long at ordinal %s but actual data type is",
-                    ordinal, readSchema.at(ordinal).dataType.typeName()
+                    "Tried to read %s at ordinal %s but actual data type is %s",
+                    expectedType.typeName(),
+                    ordinal,
+                    actualTypeName
                 )
             );
         }

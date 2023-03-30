@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-package io.delta.core
+package io.delta.core.internal
 
+import io.delta.core.Table
 import io.delta.core.helpers.DefaultTableHelper
+import io.delta.core.internal.SnapshotImpl
 import io.delta.core.util.GoldenTableUtils
 import org.scalatest.funsuite.AnyFunSuite
 
@@ -59,8 +61,9 @@ class TableSuite extends AnyFunSuite with GoldenTableUtils {
   test("can load table schema - table without a checkpoint") {
     withGoldenTable("basic-no-checkpoint") { path =>
       val table = Table.forPath(path, new DefaultTableHelper())
-      val snapshot = table.getLatestSnapshot
+      val snapshot = table.getLatestSnapshot.asInstanceOf[SnapshotImpl]
       println(snapshot.getSchema)
+      println(snapshot.getProtocol)
     }
   }
 }
