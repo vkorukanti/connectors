@@ -140,18 +140,9 @@ public class JsonRow implements Row {
         }
     }
 
-    private void assertType(int ordinal, DataType expectedType) {
-        final String actualTypeName = readSchema.at(ordinal).dataType.typeName();
-        if (!actualTypeName.equals(expectedType.typeName()) &&
-            !actualTypeName.equals(UnresolvedDataType.INSTANCE.typeName())) {
-            throw new RuntimeException(
-                String.format(
-                    "Tried to read long at ordinal %s but actual data type is",
-                    ordinal, readSchema.at(ordinal).dataType.typeName()
-                )
-            );
-        }
-    }
+    ////////////////////////////////////////
+    // Public APIs
+    ////////////////////////////////////////
 
     @Override
     public boolean isNullAt(int ordinal) {
@@ -201,5 +192,22 @@ public class JsonRow implements Row {
             ", parsedValues=" + parsedValues +
             ", readSchema=" + readSchema +
             '}';
+    }
+
+    ////////////////////////////////////////
+    // Private Helper Methods
+    ////////////////////////////////////////
+
+    private void assertType(int ordinal, DataType expectedType) {
+        final String actualTypeName = readSchema.at(ordinal).dataType.typeName();
+        if (!actualTypeName.equals(expectedType.typeName()) &&
+            !actualTypeName.equals(UnresolvedDataType.INSTANCE.typeName())) {
+            throw new RuntimeException(
+                String.format(
+                    "Tried to read long at ordinal %s but actual data type is",
+                    ordinal, readSchema.at(ordinal).dataType.typeName()
+                )
+            );
+        }
     }
 }
