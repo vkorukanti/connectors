@@ -7,8 +7,8 @@ import io.delta.core.fs.Path;
 import io.delta.core.internal.lang.Lazy;
 
 public abstract class FileAction implements Action {
-    private final String path;
-    private final boolean dataChange;
+    protected final String path;
+    protected final boolean dataChange;
     private final Lazy<URI> pathAsUri;
     private final Lazy<Path> pathAsPath;
 

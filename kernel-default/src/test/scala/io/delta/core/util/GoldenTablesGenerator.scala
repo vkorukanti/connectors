@@ -21,10 +21,13 @@ import java.io.File
 import org.apache.spark.SparkConf
 import org.apache.spark.network.util.JavaUtils
 import org.apache.spark.sql.QueryTest
+import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.test.SharedSparkSession
 
 /**
  * GENERATE_GOLDEN_TABLES=1 build/sbt 'kernelDefault/testOnly *GoldenTablesGenerator'
+ * or
+ * GENERATE_GOLDEN_TABLES=1 build/sbt 'kernelDefault/testOnly *GoldenTablesGenerator -- -z "<table-name>"'
  */
 class GoldenTablesGenerator extends QueryTest with SharedSparkSession {
 
@@ -67,7 +70,17 @@ class GoldenTablesGenerator extends QueryTest with SharedSparkSession {
     }
   }
 
-  generate("primitive-data-types") { path =>
-
+  generate("basic-partitioned-no-checkpoint") { path =>
+    for (i <- 0 to 8) {
+      val low = i * 10
+      val high = (i + 1) * 10
+      spark.range(low, high)
+        .withColumn("part_a", col("id") % 2)
+        .withColumn("part_b", col("id") % 5)
+        .write
+        .format("delta")
+        .partitionBy("part_a", "part_b")
+        .mode("append").save(path)
+    }
   }
 }

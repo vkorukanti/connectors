@@ -38,5 +38,5 @@ public interface Row {
 //
     <T> List<T> getList(int ordinal);
 //
-//    <K, V> Map<K, V> getMap(int ordinal);
+    <K, V> Map<K, V> getMap(int ordinal);
 }

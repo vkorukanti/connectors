@@ -16,9 +16,10 @@
 
 package io.delta.core.internal
 
+import scala.collection.JavaConverters._
+
 import io.delta.core.Table
 import io.delta.core.helpers.DefaultTableHelper
-import io.delta.core.internal.SnapshotImpl
 import io.delta.core.util.GoldenTableUtils
 import org.scalatest.funsuite.AnyFunSuite
 
@@ -58,12 +59,20 @@ class TableSuite extends AnyFunSuite with GoldenTableUtils {
     }
   }
 
-  test("can load table schema - table without a checkpoint") {
+  test("can load table protocol & schema - table without a checkpoint") {
     withGoldenTable("basic-no-checkpoint") { path =>
       val table = Table.forPath(path, new DefaultTableHelper())
       val snapshot = table.getLatestSnapshot.asInstanceOf[SnapshotImpl]
       println(snapshot.getSchema)
       println(snapshot.getProtocol)
+    }
+  }
+
+  test("can parse add file partition values - basic - no checkpoint") {
+    withGoldenTable("basic-partitioned-no-checkpoint") { path =>
+      val table = Table.forPath(path, new DefaultTableHelper())
+      val snapshot = table.getLatestSnapshot.asInstanceOf[SnapshotImpl]
+      snapshot.getAddFiles.forEachRemaining(x => println(x))
     }
   }
 }

@@ -30,7 +30,7 @@ public class Metadata implements Action {
         .add("format", Format.READ_SCHEMA)
         .add("schemaString", StringType.INSTANCE)
         .add("partitionColumns", new ArrayType(StringType.INSTANCE, false /* contains null */))
-        .add("configuration", new MapType())
+        .add("configuration", new MapType(StringType.INSTANCE, StringType.INSTANCE, false))
         .add("createdTime", LongType.INSTANCE);
 
     ////////////////////////////////////////////////////////////////////////////////

@@ -3,6 +3,7 @@ package io.delta.core.internal;
 import io.delta.core.ScanBuilder;
 import io.delta.core.Snapshot;
 import io.delta.core.fs.Path;
+import io.delta.core.internal.actions.AddFile;
 import io.delta.core.internal.actions.Metadata;
 import io.delta.core.internal.actions.Protocol;
 import io.delta.core.internal.lang.Lazy;
@@ -10,6 +11,7 @@ import io.delta.core.internal.lang.Tuple2;
 import io.delta.core.internal.replay.LogReplay;
 import io.delta.core.internal.snapshot.LogSegment;
 import io.delta.core.types.StructType;
+import io.delta.core.utils.CloseableIterator;
 
 public class SnapshotImpl implements Snapshot {
     private final Path logPath;
@@ -59,6 +61,10 @@ public class SnapshotImpl implements Snapshot {
     ////////////////////////////////////////
     // Internal APIs
     ////////////////////////////////////////
+
+    public CloseableIterator<AddFile> getAddFiles() {
+        return logReplay.getAddFiles();
+    }
 
     public Protocol getProtocol() {
         return protocolAndMetadata.get()._1;

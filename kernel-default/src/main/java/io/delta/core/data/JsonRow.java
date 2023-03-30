@@ -1,10 +1,10 @@
 package io.delta.core.data;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.delta.core.types.*;
@@ -19,7 +19,8 @@ public class JsonRow implements Row {
             ObjectNode rootNode,
             String fieldName,
             DataType dataType,
-            boolean isNullable) {
+            boolean isNullable,
+            ObjectMapper objectMapper) {
         if (rootNode.get(fieldName) == null) {
             if (isNullable) {
                 return null;
@@ -54,6 +55,7 @@ public class JsonRow implements Row {
         }
 
         if (dataType instanceof IntegerType) {
+            // TODO: handle other number cases (e.g. short) and throw on invalid cases (e.g. long)
             if (!jsonValue.isInt()) {
                 throw new RuntimeException(
                     String.format("RootNode at %s isn't an int", fieldName)
@@ -63,12 +65,15 @@ public class JsonRow implements Row {
         }
 
         if (dataType instanceof LongType) {
-            if (!jsonValue.isLong()) {
+            if (!jsonValue.isNumber()) {
                 throw new RuntimeException(
-                    String.format("RootNode at %s isn't a long", fieldName)
+                    String.format("RootNode at %s isn't a long.\nRootNode: %s\nElement: %s", fieldName, rootNode, jsonValue)
                 );
             }
-            return jsonValue.longValue();
+            if (!jsonValue.isLong()) {
+                System.out.println("WARN: expected a long, but jsonValue is " + jsonValue.numberValue().getClass().getSimpleName());
+            }
+            return jsonValue.numberValue().longValue();
         }
 
         if (dataType instanceof StringType) {
@@ -86,7 +91,7 @@ public class JsonRow implements Row {
                     String.format("RootNode at %s isn't an object", fieldName)
                 );
             }
-            return new JsonRow((ObjectNode) jsonValue, (StructType) dataType);
+            return new JsonRow((ObjectNode) jsonValue, (StructType) dataType, objectMapper);
         }
 
         if (dataType instanceof ArrayType) {
@@ -97,13 +102,21 @@ public class JsonRow implements Row {
             }
             final ArrayType arrayType = ((ArrayType) dataType);
             final List<Object> output = new ArrayList<>();
-            final ArrayNode array = (ArrayNode) jsonValue;
+            final ArrayNode jsonArray = (ArrayNode) jsonValue;
 
-            for (Iterator<JsonNode> it = array.elements(); it.hasNext();) {
-                JsonNode element = it.next();
+            for (Iterator<JsonNode> it = jsonArray.elements(); it.hasNext();) {
+                final JsonNode element = it.next();
+                // TODO: parse using the arrayType.getElementType() while verifying that the element
+                //       matches that
                 if (element.isObject()) {
                     output.add(
-                        new JsonRow((ObjectNode) element, (StructType) arrayType.getElementType())
+                        new JsonRow((ObjectNode) element, (StructType) arrayType.getElementType(), objectMapper)
+                    );
+                } else if (element.isTextual()) {
+                    output.add(element.textValue());
+                } else {
+                    throw new RuntimeException(
+                        String.format("TODO implement this.\nparent%s\nthis%s\nchild%s", rootNode, jsonArray, element)
                     );
                 }
             }
@@ -111,8 +124,14 @@ public class JsonRow implements Row {
         }
 
         if (dataType instanceof MapType) {
-            // TODO:
-            return null;
+            if (!jsonValue.isObject()) {
+                throw new RuntimeException(
+                    String.format("RootNode at %s isn't an map", fieldName)
+                );
+            }
+
+            return objectMapper
+                .convertValue(jsonValue, new TypeReference<Map<String, Object>>() {});
         }
 
         throw new UnsupportedOperationException(
@@ -128,14 +147,15 @@ public class JsonRow implements Row {
     private final Object[] parsedValues;
     private final StructType readSchema;
 
-    public JsonRow(ObjectNode rootNode, StructType readSchema) {
+    public JsonRow(ObjectNode rootNode, StructType readSchema, ObjectMapper objectMapper) {
         this.rootNode = rootNode;
         this.readSchema = readSchema;
         this.parsedValues = new Object[readSchema.length()];
 
         for (int i = 0; i < readSchema.length(); i++) {
             final StructField field = readSchema.at(i);
-            final Object parsedValue = decode(rootNode, field.name, field.dataType, field.nullable);
+            final Object parsedValue =
+                decode(rootNode, field.name, field.dataType, field.nullable, objectMapper);
             parsedValues[i] = parsedValue;
         }
     }
@@ -183,6 +203,12 @@ public class JsonRow implements Row {
     public <T> List<T> getList(int ordinal) {
         assertType(ordinal, ArrayType.EMPTY_INSTANCE);
         return (List<T>) parsedValues[ordinal];
+    }
+
+    @Override
+    public <K, V> Map<K, V> getMap(int ordinal) {
+        assertType(ordinal, MapType.EMPTY_INSTANCE);
+        return (Map<K, V>) parsedValues[ordinal];
     }
 
     @Override
