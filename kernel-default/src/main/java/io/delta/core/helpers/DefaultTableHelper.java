@@ -127,7 +127,7 @@ public class DefaultTableHelper implements TableHelper {
     public Row parseJson(String json, StructType readSchema) {
         try {
             final JsonNode jsonNode = objectMapper.readTree(json);
-            return new JsonRow((ObjectNode) jsonNode, readSchema, objectMapper);
+            return new JsonRow((ObjectNode) jsonNode, readSchema);
         } catch (JsonProcessingException ex) {
             throw new RuntimeException(String.format("Could not parse JSON: %s", json), ex);
         }

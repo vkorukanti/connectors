@@ -13,4 +13,16 @@ public class MapType extends DataType {
         this.valueType = valueType;
         this.valueContainsNull = valueContainsNull;
     }
+
+    public DataType getKeyType() {
+        return keyType;
+    }
+
+    public DataType getValueType() {
+        return valueType;
+    }
+
+    public boolean isValueContainsNull() {
+        return valueContainsNull;
+    }
 }

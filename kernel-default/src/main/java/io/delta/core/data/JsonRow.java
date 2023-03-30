@@ -2,9 +2,7 @@ package io.delta.core.data;
 
 import java.util.*;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.delta.core.types.*;
@@ -15,40 +13,19 @@ public class JsonRow implements Row {
     // Static Methods
     ////////////////////////////////////////////////////////////////////////////////
 
-    private static Object decode(
-            ObjectNode rootNode,
-            String fieldName,
-            DataType dataType,
-            boolean isNullable,
-            ObjectMapper objectMapper) {
-        if (rootNode.get(fieldName) == null) {
-            if (isNullable) {
-                return null;
-            }
-
-            throw new RuntimeException(
-                String.format(
-                    "Root node at key %s is null but field isn't nullable. Root node: %s",
-                    fieldName,
-                    rootNode
-                )
-            );
-        }
-
-        JsonNode jsonValue = rootNode.get(fieldName);
-
+    private static Object decodeElement(JsonNode jsonValue, DataType dataType) {
         if (dataType instanceof UnresolvedDataType) {
             if (jsonValue.isTextual()) {
                 return jsonValue.textValue();
             } else if (jsonValue instanceof ObjectNode) {
-                // TODO
+                throw new RuntimeException("TODO handle UnresolvedDataType of type object");
             }
         }
 
         if (dataType instanceof BooleanType) {
             if (!jsonValue.isBoolean()) {
                 throw new RuntimeException(
-                    String.format("RootNode at %s isn't a boolean", fieldName)
+                    String.format("Couldn't decode %s, expected a boolean", jsonValue)
                 );
             }
             return jsonValue.booleanValue();
@@ -58,7 +35,7 @@ public class JsonRow implements Row {
             // TODO: handle other number cases (e.g. short) and throw on invalid cases (e.g. long)
             if (!jsonValue.isInt()) {
                 throw new RuntimeException(
-                    String.format("RootNode at %s isn't an int", fieldName)
+                    String.format("Couldn't decode %s, expected an int", jsonValue)
                 );
             }
             return jsonValue.intValue();
@@ -67,11 +44,8 @@ public class JsonRow implements Row {
         if (dataType instanceof LongType) {
             if (!jsonValue.isNumber()) {
                 throw new RuntimeException(
-                    String.format("RootNode at %s isn't a long.\nRootNode: %s\nElement: %s", fieldName, rootNode, jsonValue)
+                    String.format("Couldn't decode %s, expected a long", jsonValue)
                 );
-            }
-            if (!jsonValue.isLong()) {
-                System.out.println("WARN: expected a long, but jsonValue is " + jsonValue.numberValue().getClass().getSimpleName());
             }
             return jsonValue.numberValue().longValue();
         }
@@ -79,7 +53,7 @@ public class JsonRow implements Row {
         if (dataType instanceof StringType) {
             if (!jsonValue.isTextual()) {
                 throw new RuntimeException(
-                    String.format("RootNode at %s isn't a string", fieldName)
+                    String.format("Couldn't decode %s, expected a string", jsonValue)
                 );
             }
             return jsonValue.textValue();
@@ -88,37 +62,28 @@ public class JsonRow implements Row {
         if (dataType instanceof StructType) {
             if (!jsonValue.isObject()) {
                 throw new RuntimeException(
-                    String.format("RootNode at %s isn't an object", fieldName)
+                    String.format("Couldn't decode %s, expected a struct", jsonValue)
                 );
             }
-            return new JsonRow((ObjectNode) jsonValue, (StructType) dataType, objectMapper);
+            return new JsonRow((ObjectNode) jsonValue, (StructType) dataType);
         }
 
         if (dataType instanceof ArrayType) {
             if (!jsonValue.isArray()) {
                 throw new RuntimeException(
-                    String.format("RootNode at %s isn't an array", fieldName)
+                    String.format("Couldn't decode %s, expected an array", jsonValue)
                 );
             }
             final ArrayType arrayType = ((ArrayType) dataType);
-            final List<Object> output = new ArrayList<>();
             final ArrayNode jsonArray = (ArrayNode) jsonValue;
+            final List<Object> output = new ArrayList<>();
+
 
             for (Iterator<JsonNode> it = jsonArray.elements(); it.hasNext();) {
                 final JsonNode element = it.next();
-                // TODO: parse using the arrayType.getElementType() while verifying that the element
-                //       matches that
-                if (element.isObject()) {
-                    output.add(
-                        new JsonRow((ObjectNode) element, (StructType) arrayType.getElementType(), objectMapper)
-                    );
-                } else if (element.isTextual()) {
-                    output.add(element.textValue());
-                } else {
-                    throw new RuntimeException(
-                        String.format("TODO implement this.\nparent%s\nthis%s\nchild%s", rootNode, jsonArray, element)
-                    );
-                }
+                final Object parsedElement =
+                    decodeElement(element, arrayType.getElementType());
+                output.add(parsedElement);
             }
             return output;
         }
@@ -126,17 +91,44 @@ public class JsonRow implements Row {
         if (dataType instanceof MapType) {
             if (!jsonValue.isObject()) {
                 throw new RuntimeException(
-                    String.format("RootNode at %s isn't an map", fieldName)
+                    String.format("Couldn't decode %s, expected a map", jsonValue)
                 );
             }
+            final MapType mapType = (MapType) dataType;
+            final Iterator<Map.Entry<String, JsonNode>> iter = ((ObjectNode) jsonValue).fields();
+            final Map<Object, Object> output = new HashMap<>();
 
-            return objectMapper
-                .convertValue(jsonValue, new TypeReference<Map<String, Object>>() {});
+            while (iter.hasNext()) {
+                Map.Entry<String, JsonNode> entry = iter.next();
+                String keyParsed = entry.getKey(); // TODO: handle non-String keys
+                Object valueParsed = decodeElement(entry.getValue(), mapType.getValueType());
+                output.put(keyParsed, valueParsed);
+            }
+
+            return output;
         }
 
         throw new UnsupportedOperationException(
             String.format("Unsupported DataType %s for RootNode %s", dataType.typeName(), jsonValue)
         );
+    }
+
+    private static Object decodeField(ObjectNode rootNode, StructField field) {
+        if (rootNode.get(field.name) == null) {
+            if (field.nullable) {
+                return null;
+            }
+
+            throw new RuntimeException(
+                String.format(
+                    "Root node at key %s is null but field isn't nullable. Root node: %s",
+                    field.name,
+                    rootNode
+                )
+            );
+        }
+
+        return decodeElement(rootNode.get(field.name), field.dataType);
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -147,15 +139,14 @@ public class JsonRow implements Row {
     private final Object[] parsedValues;
     private final StructType readSchema;
 
-    public JsonRow(ObjectNode rootNode, StructType readSchema, ObjectMapper objectMapper) {
+    public JsonRow(ObjectNode rootNode, StructType readSchema) {
         this.rootNode = rootNode;
         this.readSchema = readSchema;
         this.parsedValues = new Object[readSchema.length()];
 
         for (int i = 0; i < readSchema.length(); i++) {
             final StructField field = readSchema.at(i);
-            final Object parsedValue =
-                decode(rootNode, field.name, field.dataType, field.nullable, objectMapper);
+            final Object parsedValue = decodeField(rootNode, field);
             parsedValues[i] = parsedValue;
         }
     }
