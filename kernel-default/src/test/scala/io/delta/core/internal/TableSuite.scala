@@ -19,6 +19,7 @@ package io.delta.core.internal
 import scala.collection.JavaConverters._
 
 import io.delta.core.Table
+import io.delta.core.expressions.{EqualTo, Literal}
 import io.delta.core.helpers.DefaultTableHelper
 import io.delta.core.util.GoldenTableUtils
 import org.scalatest.funsuite.AnyFunSuite
@@ -73,6 +74,21 @@ class TableSuite extends AnyFunSuite with GoldenTableUtils {
       val table = Table.forPath(path, new DefaultTableHelper())
       val snapshot = table.getLatestSnapshot.asInstanceOf[SnapshotImpl]
       snapshot.getAddFiles.forEachRemaining(x => println(x))
+    }
+  }
+
+  test("can perform partition pruning- basic - no checkpoint") {
+    withGoldenTable("basic-partitioned-no-checkpoint") { path =>
+      val table = Table.forPath(path, new DefaultTableHelper())
+      val snapshot = table.getLatestSnapshot.asInstanceOf[SnapshotImpl]
+      val schema = snapshot.getSchema
+      val partitionFilter = new EqualTo(schema.column("part_a"), Literal.of(0L));
+      val scan = snapshot.getScanBuilder().withFilter(partitionFilter).build()
+      scan
+        .getTasks
+        .asScala
+        .map(task => task.asInstanceOf[ScanTaskImpl].getAddFile)
+        .foreach(add => assert(add.getPartitionValues.get("part_a").toLong == 0))
     }
   }
 }

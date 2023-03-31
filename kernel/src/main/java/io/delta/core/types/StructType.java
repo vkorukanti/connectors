@@ -1,11 +1,11 @@
 package io.delta.core.types;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import io.delta.core.data.Row;
+import io.delta.core.expressions.Column;
+import io.delta.core.internal.lang.Tuple2;
 
 public final class StructType extends DataType {
 
@@ -32,7 +32,9 @@ public final class StructType extends DataType {
     // Instance Fields / Methods
     ////////////////////////////////////////////////////////////////////////////////
 
+    private final Map<String, Tuple2<StructField, Integer>> nameToFieldAndOrdinal;
     private final List<StructField> fields;
+    private final List<String> fieldNames;
 
     public StructType() {
         this(new ArrayList<>());
@@ -40,6 +42,12 @@ public final class StructType extends DataType {
 
     public StructType(List<StructField> fields) {
         this.fields = fields;
+        this.fieldNames = fields.stream().map(f -> f.getName()).collect(Collectors.toList());
+
+        this.nameToFieldAndOrdinal = new HashMap<>();
+        for (int i = 0; i < fields.size(); i++) {
+            nameToFieldAndOrdinal.put(fields.get(i).getName(), new Tuple2<>(fields.get(i), i));
+        }
     }
 
     public StructType add(StructField field) {
@@ -58,15 +66,41 @@ public final class StructType extends DataType {
     }
 
     public List<String> fieldNames() {
-        return fields.stream().map(f -> f.name).collect(Collectors.toList());
+        return fieldNames;
     }
 
     public int length() {
         return fields.size();
     }
 
+    public int indexOf(String fieldName) {
+        return fieldNames.indexOf(fieldName);
+    }
+
+    public StructField get(String fieldName) {
+        return nameToFieldAndOrdinal.get(fieldName)._1;
+    }
+
     public StructField at(int index) {
         return fields.get(index);
+    }
+
+    /**
+     * Creates a {@link io.delta.core.expressions.Column} expression for the field with the given
+     * {@code fieldName}.
+     *
+     * @param ordinal the ordinal of the {@link StructField} to create a column for
+     * @return a {@link Column} expression for the {@link StructField} with name {@code fieldName}
+     */
+    public Column column(int ordinal) {
+        final StructField field = at(ordinal);
+        return new Column(ordinal, field.getName(), field.getDataType());
+    }
+
+    public Column column(String fieldName) {
+        Tuple2<StructField, Integer> fieldAndOrdinal = nameToFieldAndOrdinal.get(fieldName);
+        System.out.println("Created column " + fieldName + " with ordinal " + fieldAndOrdinal._2);
+        return new Column(fieldAndOrdinal._2, fieldName, fieldAndOrdinal._1.getDataType());
     }
 
     @Override

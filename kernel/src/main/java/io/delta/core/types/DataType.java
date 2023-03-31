@@ -20,5 +20,21 @@ public abstract class DataType {
        }
        return name.toLowerCase(Locale.ROOT);
     }
+    public boolean equivalent(DataType dt) {
+        return this.equals(dt);
+    }
+
+    @Override
+    public String toString() {
+        return typeName();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        DataType that = (DataType) o;
+        return typeName().equals(that.typeName());
+    }
 }
 

@@ -50,17 +50,25 @@ public class SnapshotImpl implements Snapshot {
 
     @Override
     public StructType getSchema() {
-        return protocolAndMetadata.get()._2.getSchema();
+        return getMetadata().getSchema();
     }
 
     @Override
     public ScanBuilder getScanBuilder() {
-        return new ScanBuilderImpl(logReplay);
+        return new ScanBuilderImpl(
+            getSchema(),
+            getMetadata().getPartitionSchema(),
+            logReplay.getAddFiles()
+        );
     }
 
     ////////////////////////////////////////
     // Internal APIs
     ////////////////////////////////////////
+
+    public Metadata getMetadata() {
+        return protocolAndMetadata.get()._2;
+    }
 
     public CloseableIterator<AddFile> getAddFiles() {
         return logReplay.getAddFiles();

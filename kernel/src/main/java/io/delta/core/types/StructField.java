@@ -24,9 +24,9 @@ public class StructField {
     // Instance Fields / Methods
     ////////////////////////////////////////////////////////////////////////////////
 
-    public final String name;
-    public final DataType dataType;
-    public final boolean nullable;
+    private final String name;
+    private final DataType dataType;
+    private final boolean nullable;
     // private final FieldMetadata metadata;
 
     public StructField(String name, DataType dataType, boolean nullable) {
@@ -35,8 +35,20 @@ public class StructField {
         this.nullable = nullable;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public DataType getDataType() {
+        return dataType;
+    }
+
+    public boolean isNullable() {
+        return nullable;
+    }
+
     @Override
     public String toString() {
-        return String.format("StructField(%s,%s,%s)", name, dataType, nullable);
+        return String.format("StructField(name=%s,type=%s,nullable=%s)", name, dataType, nullable);
     }
 }

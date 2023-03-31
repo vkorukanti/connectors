@@ -114,21 +114,21 @@ public class JsonRow implements Row {
     }
 
     private static Object decodeField(ObjectNode rootNode, StructField field) {
-        if (rootNode.get(field.name) == null) {
-            if (field.nullable) {
+        if (rootNode.get(field.getName()) == null) {
+            if (field.isNullable()) {
                 return null;
             }
 
             throw new RuntimeException(
                 String.format(
                     "Root node at key %s is null but field isn't nullable. Root node: %s",
-                    field.name,
+                    field.getName(),
                     rootNode
                 )
             );
         }
 
-        return decodeElement(rootNode.get(field.name), field.dataType);
+        return decodeElement(rootNode.get(field.getName()), field.getDataType());
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -216,7 +216,7 @@ public class JsonRow implements Row {
     ////////////////////////////////////////
 
     private void assertType(int ordinal, DataType expectedType) {
-        final String actualTypeName = readSchema.at(ordinal).dataType.typeName();
+        final String actualTypeName = readSchema.at(ordinal).getDataType().typeName();
         if (!actualTypeName.equals(expectedType.typeName()) &&
             !actualTypeName.equals(UnresolvedDataType.INSTANCE.typeName())) {
             throw new RuntimeException(

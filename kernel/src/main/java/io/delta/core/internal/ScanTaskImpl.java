@@ -7,12 +7,19 @@ import io.delta.core.utils.CloseableIterator;
 
 public class ScanTaskImpl implements ScanTask {
 
+    private final AddFile addFile;
+
     public ScanTaskImpl(AddFile addFile) {
-        System.out.println("Created ScanTaskImpl for AddFile " + addFile.getPath());
+        this.addFile = addFile;
     }
 
     @Override
     public CloseableIterator<ColumnarBatch> getData() {
         return null;
+    }
+
+    /** Visible for testing */
+    public AddFile getAddFile() {
+        return this.addFile;
     }
 }

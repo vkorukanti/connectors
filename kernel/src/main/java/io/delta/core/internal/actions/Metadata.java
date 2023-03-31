@@ -1,5 +1,8 @@
 package io.delta.core.internal.actions;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import io.delta.core.data.Row;
 import io.delta.core.helpers.TableHelper;
 import io.delta.core.types.*;
@@ -17,10 +20,11 @@ public class Metadata implements Action {
         final String description = row.getString(2);
         final Format format = Format.fromRow(row.getRecord(3));
         final String schemaJson = row.getString(4);
+        final List<String> partitionColumns = row.getList(5);
         Row schemaRow = tableHelper.parseJson(schemaJson, StructType.READ_SCHEMA);
         StructType schema = StructType.fromRow(schemaRow);
 
-        return new Metadata(schema);
+        return new Metadata(schema, partitionColumns);
     }
 
     public static final StructType READ_SCHEMA = new StructType()
@@ -47,12 +51,24 @@ public class Metadata implements Action {
     // createdTime
 
     private final StructType schema;
+    private final List<String> partitionColumns;
 
-    public Metadata(StructType schema) {
+    public Metadata(StructType schema, List<String> partitionColumns) {
         this.schema = schema;
+        this.partitionColumns = partitionColumns;
     }
 
     public StructType getSchema() {
         return schema;
+    }
+
+    public List<String> getPartitionColumns() {
+        return partitionColumns;
+    }
+
+    public StructType getPartitionSchema() {
+        return new StructType(
+            partitionColumns.stream().map(schema::get).collect(Collectors.toList())
+        );
     }
 }

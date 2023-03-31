@@ -1,5 +1,6 @@
 package io.delta.core.internal.actions;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
@@ -59,6 +60,18 @@ public class AddFile extends FileAction {
     @Override
     public AddFile copyWithDataChange(boolean dataChange) {
         return this; // TODO
+    }
+
+    public Map<String, String> getPartitionValues() {
+        return Collections.unmodifiableMap(partitionValues);
+    }
+
+    public long getSize() {
+        return size;
+    }
+
+    public long getModificationTime() {
+        return modificationTime;
     }
 
     @Override
