@@ -578,6 +578,22 @@ lazy val standalone = (project in file("standalone"))
     (Test / test) := ((Test / test) dependsOn (Compile / unidoc)).value
   )
 
+lazy val defaultScanhelper = (project in file("default-scanhelper"))
+  .dependsOn(core)
+  .settings(
+    name := "delta-scanhelper-default",
+    commonSettings,
+    skipReleaseSettings,
+    libraryDependencies ++= Seq(
+      "org.apache.parquet" % "parquet-hadoop" % "1.12.3",
+      "org.apache.hadoop" % "hadoop-client" % hadoopVersion % "provided",
+
+      "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
+      "junit" % "junit" % "4.11" % "test",
+      "com.novocode" % "junit-interface" % "0.11" % "test",
+    )
+  )
+
 /*
  ********************
  *  MIMA settings   *
