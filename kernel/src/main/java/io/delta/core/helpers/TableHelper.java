@@ -2,6 +2,7 @@ package io.delta.core.helpers;
 
 import java.io.FileNotFoundException;
 
+import io.delta.core.data.ColumnarBatch;
 import io.delta.core.data.Row;
 import io.delta.core.expressions.Expression;
 import io.delta.core.fs.FileStatus;
@@ -17,6 +18,12 @@ public interface TableHelper {
 
     /** Uses the readSchema for partition pruning. */
     CloseableIterator<Row> readParquetFile(String path, StructType readSchema) throws FileNotFoundException;
+
+    /** Uses the readSchema for partition pruning. */
+    // PAss the partition value
+    // readSchema - data , partition column ordering
+    // map partition column StuctField -> value
+    CloseableIterator<ColumnarBatch> readParquetFileAsBatches(String path, StructType readSchema) throws FileNotFoundException;
 
     /** Uses the readSchema for partition pruning and the skippingFilter for data filtering. */
     CloseableIterator<Row> readParquetFile(

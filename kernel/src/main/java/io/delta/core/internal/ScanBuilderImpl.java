@@ -5,6 +5,8 @@ import java.util.Optional;
 import io.delta.core.Scan;
 import io.delta.core.ScanBuilder;
 import io.delta.core.expressions.Expression;
+import io.delta.core.fs.Path;
+import io.delta.core.helpers.TableHelper;
 import io.delta.core.internal.actions.AddFile;
 import io.delta.core.types.StructType;
 import io.delta.core.utils.CloseableIterator;
@@ -14,17 +16,23 @@ public class ScanBuilderImpl implements ScanBuilder {
     private final StructType snapshotSchema;
     private final StructType snapshotPartitionSchema;
     private final CloseableIterator<AddFile> filesIter;
+    private final TableHelper tableHelper;
+    private final Path dataPath;
 
     private StructType readSchema;
     private Optional<Expression> filter;
 
     public ScanBuilderImpl(
+            Path dataPath,
             StructType snapshotSchema,
             StructType snapshotPartitionSchema,
-            CloseableIterator<AddFile> filesIter) {
+            CloseableIterator<AddFile> filesIter,
+            TableHelper tableHelper) {
+        this.dataPath = dataPath;
         this.snapshotSchema = snapshotSchema;
         this.snapshotPartitionSchema = snapshotPartitionSchema;
         this.filesIter = filesIter;
+        this.tableHelper = tableHelper;
 
         this.readSchema = snapshotSchema;
         this.filter = Optional.empty();
@@ -45,6 +53,13 @@ public class ScanBuilderImpl implements ScanBuilder {
 
     @Override
     public Scan build() {
-        return new ScanImpl(snapshotSchema, readSchema, snapshotPartitionSchema, filesIter, filter);
+        return new ScanImpl(
+                snapshotSchema,
+                readSchema,
+                snapshotPartitionSchema,
+                filesIter,
+                filter,
+                dataPath,
+                tableHelper);
     }
 }

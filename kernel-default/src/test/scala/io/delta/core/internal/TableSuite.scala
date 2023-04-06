@@ -52,7 +52,10 @@ class TableSuite extends AnyFunSuite with GoldenTableUtils {
       val iter = snapshot.getScanBuilder().build().getTasks()
       while (iter.hasNext) {
         val task = iter.next()
-        task.getData
+        val data = task.getData(snapshot.getSchema)
+        while (data.hasNext) {
+          val batch = data.next();
+        }
         count += 1
       }
       assert(count === 18)

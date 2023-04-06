@@ -1,10 +1,8 @@
-package io.delta.scanhelper;
+package io.delta.core.helpers;
 
-import io.delta.standalone.types.StructType;
+import io.delta.core.types.StructType;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.Type;
-
-import java.util.Arrays;
 
 public class Utils
 {
@@ -19,16 +17,17 @@ public class Utils
      * @return
      */
     public static final MessageType pruneSchema(
-            MessageType fileSchema,
-            StructType deltaType)
+            MessageType fileSchema, // parquet
+            StructType deltaType) // delta-core
     {
-        return Arrays.stream(deltaType.getFields())
+        return deltaType.fields().stream()
                 .map(column -> findStructField(fileSchema, column.getName()))
                 .map(type -> new MessageType(fileSchema.getName(), type))
                 .reduce(MessageType::union)
                 .get();
     }
 
+    // Type
     private static Type findStructField(MessageType fileSchema, String columnName)
     {
         // TODO: we need to provide a way to search by id.

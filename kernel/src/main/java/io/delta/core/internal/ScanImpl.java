@@ -7,6 +7,8 @@ import java.util.Optional;
 import io.delta.core.Scan;
 import io.delta.core.ScanTask;
 import io.delta.core.expressions.Expression;
+import io.delta.core.fs.Path;
+import io.delta.core.helpers.TableHelper;
 import io.delta.core.internal.actions.AddFile;
 import io.delta.core.internal.data.PartitionRow;
 import io.delta.core.internal.lang.FilteredCloseableIterator;
@@ -20,6 +22,8 @@ public class ScanImpl implements Scan {
     /** Complete schema of the snapshot to be scanned. */
     private final StructType snapshotSchema;
 
+    private final Path dataPath;
+
     /** Schema that we actually want to read. */
     private final StructType readSchema;
 
@@ -27,6 +31,7 @@ public class ScanImpl implements Scan {
     private final StructType snapshotPartitionSchema;
 
     private final CloseableIterator<AddFile> filesIter;
+    private final TableHelper tableHelper;
 
     /** Mapping from partitionColumnName to its ordinal in the `snapshotSchema`. */
     private final Map<String, Integer> partitionColumnOrdinals;
@@ -39,12 +44,16 @@ public class ScanImpl implements Scan {
             StructType readSchema,
             StructType snapshotPartitionSchema,
             CloseableIterator<AddFile> filesIter,
-            Optional<Expression> filter) {
+            Optional<Expression> filter,
+            Path dataPath,
+            TableHelper tableHelper) {
         this.snapshotSchema = snapshotSchema;
         this.readSchema = readSchema;
         this.snapshotPartitionSchema = snapshotPartitionSchema;
         this.filesIter = filesIter;
         this.partitionColumnOrdinals = PartitionUtils.getPartitionOrdinals(snapshotSchema, snapshotPartitionSchema);
+        this.dataPath = dataPath;
+        this.tableHelper = tableHelper;
 
         if (filter.isPresent()) {
             final List<String> partitionColumns = snapshotPartitionSchema.fieldNames();
@@ -74,7 +83,7 @@ public class ScanImpl implements Scan {
             @Override
             protected Optional<ScanTask> accept(AddFile addFile) {
                 if (!metadataFilterConjunction.isPresent()) {
-                    return Optional.of(new ScanTaskImpl(addFile));
+                    return Optional.of(new ScanTaskImpl(dataPath, addFile, tableHelper));
                 }
 
                 // Perform Partition Pruning
@@ -82,7 +91,7 @@ public class ScanImpl implements Scan {
                 final boolean accept = (boolean) metadataFilterConjunction.get().eval(row);
 
                 if (accept) {
-                    return Optional.of(new ScanTaskImpl(addFile));
+                    return Optional.of(new ScanTaskImpl(dataPath, addFile, tableHelper));
                 }
 
                 return Optional.empty();

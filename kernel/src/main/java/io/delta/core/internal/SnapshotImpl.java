@@ -15,6 +15,7 @@ import io.delta.core.utils.CloseableIterator;
 
 public class SnapshotImpl implements Snapshot {
     private final Path logPath;
+    private final Path dataPath;
     private final long version;
     private final LogSegment logSegment;
     private final TableImpl tableImpl;
@@ -25,11 +26,13 @@ public class SnapshotImpl implements Snapshot {
 
     public SnapshotImpl(
             Path logPath,
+            Path dataPath,
             long version,
             LogSegment logSegment,
             TableImpl tableImpl,
             long timestamp) {
         this.logPath = logPath;
+        this.dataPath = dataPath;
         this.version = version;
         this.logSegment = logSegment;
         this.tableImpl = tableImpl;
@@ -56,9 +59,11 @@ public class SnapshotImpl implements Snapshot {
     @Override
     public ScanBuilder getScanBuilder() {
         return new ScanBuilderImpl(
+            dataPath,
             getSchema(),
             getMetadata().getPartitionSchema(),
-            logReplay.getAddFiles()
+            logReplay.getAddFiles(),
+            tableImpl.tableHelper
         );
     }
 

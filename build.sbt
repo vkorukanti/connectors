@@ -578,22 +578,6 @@ lazy val standalone = (project in file("standalone"))
     (Test / test) := ((Test / test) dependsOn (Compile / unidoc)).value
   )
 
-lazy val defaultScanhelper = (project in file("default-scanhelper"))
-  .dependsOn(core)
-  .settings(
-    name := "delta-scanhelper-default",
-    commonSettings,
-    skipReleaseSettings,
-    libraryDependencies ++= Seq(
-      "org.apache.parquet" % "parquet-hadoop" % "1.12.3",
-      "org.apache.hadoop" % "hadoop-client" % hadoopVersion % "provided",
-
-      "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
-      "junit" % "junit" % "4.11" % "test",
-      "com.novocode" % "junit-interface" % "0.11" % "test",
-    )
-  )
-
 /*
  ********************
  *  MIMA settings   *
@@ -833,6 +817,7 @@ lazy val kernelDefault = (project in file("kernel-default"))
       "org.apache.hadoop" % "hadoop-client-api" % "3.3.1", // Configuration, Path
       "io.delta" % "delta-storage" % "2.2.0", // LogStore
       "com.fasterxml.jackson.core" % "jackson-databind" % "2.13.5", // ObjectMapper
+      "org.apache.parquet" % "parquet-hadoop" % "1.12.3",
 
       "org.scalatest" %% "scalatest" % "3.2.15" % "test",
       "io.delta" %% "delta-core" % "2.2.0" % "test",
@@ -840,5 +825,7 @@ lazy val kernelDefault = (project in file("kernel-default"))
       "org.apache.spark" %% "spark-sql" % "3.3.2" % "test" classifier "tests",
       "org.apache.spark" %% "spark-core" % "3.3.2" % "test" classifier "tests",
       "org.apache.spark" %% "spark-catalyst" % "3.3.2" % "test" classifier "tests",
+      "junit" % "junit" % "4.11" % "test",
+      "com.novocode" % "junit-interface" % "0.11" % "test",
     )
   )

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.delta.core.data.ColumnarBatch;
 import io.delta.core.data.JsonRow;
 import org.apache.hadoop.conf.Configuration;
 
@@ -20,6 +21,7 @@ import io.delta.storage.LocalLogStore;
 import io.delta.storage.LogStore;
 import org.apache.hadoop.fs.Path;
 
+// TODO: Need to make this class serializable
 public class DefaultTableHelper implements TableHelper {
 
     private final Configuration hadoopConf;
@@ -115,7 +117,16 @@ public class DefaultTableHelper implements TableHelper {
 
     @Override
     public CloseableIterator<Row> readParquetFile(String path, StructType readSchema) {
-        return null;
+        ParquetRowReader recordReader = new ParquetRowReader(hadoopConf);
+        return recordReader.read(path, readSchema);
+    }
+
+    @Override
+    public CloseableIterator<ColumnarBatch> readParquetFileAsBatches(String path, StructType readSchema)
+            throws FileNotFoundException
+    {
+        ParquetBatchReader batchReader = new ParquetBatchReader(hadoopConf);
+        return batchReader.read(path, readSchema);
     }
 
     @Override

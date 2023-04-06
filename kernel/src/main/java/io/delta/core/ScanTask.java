@@ -1,9 +1,16 @@
 package io.delta.core;
 
 import io.delta.core.data.ColumnarBatch;
+import io.delta.core.types.StructType;
 import io.delta.core.utils.CloseableIterator;
 
-public interface ScanTask {
+import java.io.IOException;
 
-    CloseableIterator<ColumnarBatch> getData();
+class Context
+{
+
+}
+
+public interface ScanTask {
+    CloseableIterator<ColumnarBatch> getData(StructType readSchema, Context context) throws IOException;
 }

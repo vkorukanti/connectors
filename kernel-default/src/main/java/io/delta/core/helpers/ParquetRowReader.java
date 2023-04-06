@@ -1,10 +1,11 @@
-package io.delta.scanhelper;
+package io.delta.core.helpers;
 
-import io.delta.standalone.data.RowRecord;
-import io.delta.standalone.types.DataType;
-import io.delta.standalone.types.StructField;
-import io.delta.standalone.types.StructType;
-import io.delta.standalone.utils.CloseableIterator;
+import io.delta.core.data.ParquetRowRecord;
+import io.delta.core.data.Row;
+import io.delta.core.types.DataType;
+import io.delta.core.types.StructField;
+import io.delta.core.types.StructType;
+import io.delta.core.utils.CloseableIterator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -23,23 +24,25 @@ import org.apache.parquet.io.api.RecordMaterializer;
 import org.apache.parquet.schema.MessageType;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
 
-public class ParquetRowRecordReader {
+public class ParquetRowReader
+{
 
     private final Configuration configuration;
 
-    public ParquetRowRecordReader(Configuration configuration)
+    public ParquetRowReader(Configuration configuration)
     {
         this.configuration = requireNonNull(configuration, "configuration is null");
     }
 
-    public CloseableIterator<RowRecord> read(String path, StructType schema) {
-        ParquetRecordReader<RowRecord> reader =
+    public CloseableIterator<Row> read(String path, StructType schema) {
+        ParquetRecordReader<Row> reader =
                 new ParquetRecordReader<>(
-                        new RowRecordReadSupport(schema),
+                        new RowReadSupport(schema),
                         FilterCompat.NOOP);
 
         Path filePath = new Path(path);
@@ -55,7 +58,7 @@ public class ParquetRowRecordReader {
             throw new RuntimeException(e);
         }
 
-        return new CloseableIterator<RowRecord>() {
+        return new CloseableIterator<Row>() {
             @Override
             public void close()
                     throws IOException
@@ -74,7 +77,7 @@ public class ParquetRowRecordReader {
             }
 
             @Override
-            public RowRecord next()
+            public Row next()
             {
                 try {
                     return reader.getCurrentValue();
@@ -85,10 +88,10 @@ public class ParquetRowRecordReader {
         };
     }
 
-    public static class RowRecordReadSupport extends ReadSupport<RowRecord> {
+    public static class RowReadSupport extends ReadSupport<Row> {
         private final StructType readSchema;
 
-        public RowRecordReadSupport(StructType readSchema)
+        public RowReadSupport(StructType readSchema)
         {
             this.readSchema = requireNonNull(readSchema, "readSchema is not null");
         }
@@ -100,7 +103,7 @@ public class ParquetRowRecordReader {
         }
 
         @Override
-        public RecordMaterializer<RowRecord> prepareForRead(
+        public RecordMaterializer<Row> prepareForRead(
                 Configuration configuration,
                 Map<String, String> keyValueMetaData,
                 MessageType fileSchema,
@@ -110,7 +113,7 @@ public class ParquetRowRecordReader {
         }
     }
 
-    public static class RowRecordMaterializer extends RecordMaterializer<RowRecord> {
+    public static class RowRecordMaterializer extends RecordMaterializer<Row> {
         private final StructType readSchema;
         private final RowRecordGroupConverter rowRecordGroupConverter;
 
@@ -126,7 +129,7 @@ public class ParquetRowRecordReader {
         }
 
         @Override
-        public RowRecord getCurrentRecord()
+        public Row getCurrentRecord()
         {
             return new ParquetRowRecord(readSchema, rowRecordGroupConverter.getCurrentRecord());
         }
@@ -151,14 +154,14 @@ public class ParquetRowRecordReader {
                 int filedIndex,
                 StructType readSchema)
         {
-            this.parent = requireNonNull(parent, "parent is not null");
+            this.parent = parent;
             this.fieldIndex = filedIndex;
             this.readSchema = requireNonNull(readSchema, "readSchema is not null");
-            StructField[] fields = readSchema.getFields();
-            this.converters = new Converter[fields.length];
+            List<StructField> fields = readSchema.fields();
+            this.converters = new Converter[fields.size()];
 
             for (int i = 0; i < converters.length; i++) {
-                final StructField field = fields[i];
+                final StructField field = fields.get(i);
                 final DataType dataType = field.getDataType();
                 if (dataType instanceof StructType) {
                     converters[i] = new RowRecordGroupConverter(this, i, (StructType) dataType);
