@@ -1,6 +1,5 @@
 package io.delta.core.data;
 
-import io.delta.core.types.DataType;
 import io.delta.core.types.StructField;
 import io.delta.core.types.StructType;
 
@@ -25,28 +24,11 @@ public class DefaultColumnarBatch implements ColumnarBatch
     }
 
     @Override
-    public StructType getSchema()
-    {
-        return schema;
-    }
-
-    @Override
     public ColumnVector getColumnVector(String columnName)
     {
         int columnOrdinal = columnNameToIndexMap.get(columnName);
         StructField field = schema.get(columnName);
         return new DefaultColumnVector(field.getDataType(), rows, columnOrdinal);
-    }
-
-    @Override
-    public void addConstantColumn(String topLevelColumnName, DataType dataType, Row value)
-    {
-    }
-
-    @Override
-    public void rename(String currentColumnName, String newColumnName)
-    {
-        // Do we need this?
     }
 
     private static Map<String, Integer> constructColumnIndexMap(StructType schema) {

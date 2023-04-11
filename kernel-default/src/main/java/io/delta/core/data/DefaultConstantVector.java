@@ -10,6 +10,7 @@ public class DefaultConstantVector implements ColumnVector
 
     public DefaultConstantVector(DataType dataType, int numRows, Object value)
     {
+        // TODO: Validate datatype and value object type
         this.dataType = dataType;
         this.numRows = numRows;
         this.value = value;

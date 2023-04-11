@@ -72,12 +72,6 @@ public class ParquetRowRecord implements Row
         return (Map<K, V>) values[ordinal];
     }
 
-    private int getIndex(String columnName)
-    {
-        return Optional.of(columnNameToIndexMap.get(columnName))
-                .orElseThrow(() -> new IllegalArgumentException("Unknown column name: " + columnName));
-    }
-
     private static Map<String, Integer> constructColumnIndexMap(StructType schema) {
         // TODO: explore Java's zipWithIndex if available
         Map<String, Integer> columnNameToIndexMap = new HashMap<>();
