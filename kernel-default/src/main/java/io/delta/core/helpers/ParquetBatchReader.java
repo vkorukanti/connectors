@@ -72,9 +72,8 @@ public class ParquetBatchReader
                 try {
                     List<Row> rows = new ArrayList<>();
                     for (int i = 0; i < 1024; i++) {
-                        if (hasNext()) {
-                            rows.add(reader.getCurrentValue());
-                        } else {
+                        rows.add(reader.getCurrentValue());
+                        if (!hasNext()) {
                             break;
                         }
                     }

@@ -3,17 +3,21 @@ package io.delta.core.helpers;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.delta.core.data.ColumnarBatch;
+import io.delta.core.data.InputFile;
 import io.delta.core.data.JsonRow;
+import io.delta.core.types.StructField;
 import org.apache.hadoop.conf.Configuration;
 
 import io.delta.core.data.Row;
-import io.delta.core.expressions.Expression;
 import io.delta.core.fs.FileStatus;
 import io.delta.core.types.StructType;
 import io.delta.core.utils.CloseableIterator;
@@ -21,7 +25,6 @@ import io.delta.storage.LocalLogStore;
 import io.delta.storage.LogStore;
 import org.apache.hadoop.fs.Path;
 
-// TODO: Need to make this class serializable
 public class DefaultTableHelper implements TableHelper {
 
     private final Configuration hadoopConf;
@@ -82,13 +85,13 @@ public class DefaultTableHelper implements TableHelper {
     }
 
     @Override
-    public CloseableIterator<Row> readJsonFile(String path, StructType readSchema) throws FileNotFoundException {
+    public CloseableIterator<Row> readJsonFile(InputFile inputFile, StructType readSchema) throws FileNotFoundException {
         return new CloseableIterator<Row>() {
             private final io.delta.storage.CloseableIterator<String> iter;
 
             {
                 try {
-                    iter = logStore.read(new Path(path), hadoopConf);
+                    iter = logStore.read(new Path(inputFile.getPath()), hadoopConf);
                 } catch (IOException ex) {
                     if (ex instanceof FileNotFoundException) {
                         throw (FileNotFoundException) ex;
@@ -116,22 +119,17 @@ public class DefaultTableHelper implements TableHelper {
     }
 
     @Override
-    public CloseableIterator<Row> readParquetFile(String path, StructType readSchema) {
-        ParquetRowReader recordReader = new ParquetRowReader(hadoopConf);
-        return recordReader.read(path, readSchema);
-    }
-
-    @Override
-    public CloseableIterator<ColumnarBatch> readParquetFileAsBatches(String path, StructType readSchema)
-            throws FileNotFoundException
+    public CloseableIterator<ColumnarBatch> readParquetFile(
+            ConnectorReadContext readContext,
+            InputFile file,
+            StructType readSchema,
+            Map<String, String> partitionValues) throws IOException
     {
+        StructType dataColumnSchema = removePartitionColumns(readSchema, partitionValues.keySet());
+        DefaultConnectorReadContext defaultScanTaskContext = (DefaultConnectorReadContext) readContext;
         ParquetBatchReader batchReader = new ParquetBatchReader(hadoopConf);
-        return batchReader.read(path, readSchema);
-    }
-
-    @Override
-    public CloseableIterator<Row> readParquetFile(String path, StructType readSchema, Expression skippingFilter) {
-        return null;
+        return batchReader.read(file.getPath(), dataColumnSchema);
+        // TODO: wrap the regular columnar batch iterator in a partition column generator
     }
 
     @Override
@@ -147,5 +145,18 @@ public class DefaultTableHelper implements TableHelper {
     @Override
     public ScanHelper getScanHelper() {
         return null;
+    }
+
+    private static StructType removePartitionColumns(
+            StructType readSchema,
+            Set<String> partitionColumns) {
+        StructType dataColumnSchema = new StructType();
+
+        for (StructField field : readSchema.fields()) {
+            if (!partitionColumns.contains(field.getName())) {
+                dataColumnSchema = dataColumnSchema.add(field);
+            }
+        }
+        return dataColumnSchema;
     }
 }

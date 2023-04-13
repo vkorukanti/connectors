@@ -60,6 +60,7 @@ public class SnapshotImpl implements Snapshot {
     public ScanBuilder getScanBuilder() {
         return new ScanBuilderImpl(
             dataPath,
+            protocolAndMetadata.get()._2.getConfiguration(),
             getSchema(),
             getMetadata().getPartitionSchema(),
             logReplay.getAddFiles(),

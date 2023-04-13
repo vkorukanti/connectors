@@ -28,6 +28,12 @@ public class DefaultColumnVector implements ColumnVector
     }
 
     @Override
+    public int getSize()
+    {
+        return rows.size();
+    }
+
+    @Override
     public void close()
     {
         // nothing to close

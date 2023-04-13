@@ -20,14 +20,16 @@ public class Utils
             MessageType fileSchema, // parquet
             StructType deltaType) // delta-core
     {
+        // TODO: Handle the case where the column is not in Parquet file
         return deltaType.fields().stream()
-                .map(column -> findStructField(fileSchema, column.getName()))
-                .map(type -> new MessageType(fileSchema.getName(), type))
+                .map(column -> {
+                    Type type = findStructField(fileSchema, column.getName());
+                    return new MessageType(column.getName(), type);
+                })
                 .reduce(MessageType::union)
                 .get();
     }
 
-    // Type
     private static Type findStructField(MessageType fileSchema, String columnName)
     {
         // TODO: we need to provide a way to search by id.

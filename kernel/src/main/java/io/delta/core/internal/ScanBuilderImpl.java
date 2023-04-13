@@ -1,5 +1,6 @@
 package io.delta.core.internal;
 
+import java.util.Map;
 import java.util.Optional;
 
 import io.delta.core.Scan;
@@ -16,6 +17,7 @@ public class ScanBuilderImpl implements ScanBuilder {
     private final StructType snapshotSchema;
     private final StructType snapshotPartitionSchema;
     private final CloseableIterator<AddFile> filesIter;
+    private final Map<String, String> configuration;
     private final TableHelper tableHelper;
     private final Path dataPath;
 
@@ -24,6 +26,7 @@ public class ScanBuilderImpl implements ScanBuilder {
 
     public ScanBuilderImpl(
             Path dataPath,
+            Map<String, String> configuration,
             StructType snapshotSchema,
             StructType snapshotPartitionSchema,
             CloseableIterator<AddFile> filesIter,
@@ -32,6 +35,7 @@ public class ScanBuilderImpl implements ScanBuilder {
         this.snapshotSchema = snapshotSchema;
         this.snapshotPartitionSchema = snapshotPartitionSchema;
         this.filesIter = filesIter;
+        this.configuration = configuration;
         this.tableHelper = tableHelper;
 
         this.readSchema = snapshotSchema;
@@ -57,6 +61,7 @@ public class ScanBuilderImpl implements ScanBuilder {
                 snapshotSchema,
                 readSchema,
                 snapshotPartitionSchema,
+                configuration,
                 filesIter,
                 filter,
                 dataPath,

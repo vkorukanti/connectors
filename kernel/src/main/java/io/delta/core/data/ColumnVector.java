@@ -9,6 +9,11 @@ public interface ColumnVector extends AutoCloseable {
     DataType getDataType();
 
     /**
+     * Number of eleements in the vector
+     */
+    int getSize();
+
+    /**
      * Cleans up memory for this column vector. The column vector is not usable after this.
      * <p>
      * This overwrites {@link AutoCloseable#close} to remove the
@@ -69,7 +74,6 @@ public interface ColumnVector extends AutoCloseable {
      * should return null.
      */
     byte[] getBinary(int rowId);
-
 
     /**
      * Returns the string type value for {@code rowId}. If the slot for {@code rowId} is null, it

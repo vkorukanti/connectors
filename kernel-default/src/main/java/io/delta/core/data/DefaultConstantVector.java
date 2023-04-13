@@ -23,6 +23,12 @@ public class DefaultConstantVector implements ColumnVector
     }
 
     @Override
+    public int getSize()
+    {
+        return numRows;
+    }
+
+    @Override
     public void close()
     {
         // nothing to close

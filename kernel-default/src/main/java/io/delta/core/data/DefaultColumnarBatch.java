@@ -14,31 +14,43 @@ public class DefaultColumnarBatch implements ColumnarBatch
 {
     private final StructType schema;
     private final List<Row> rows;
-    private final Map<String, Integer> columnNameToIndexMap;
+    private final Map<Integer, String> columnIndexToNameMap;
 
     public DefaultColumnarBatch(StructType schema, List<Row> rows) {
         this.schema = schema;
         this.rows = rows;
-        this.columnNameToIndexMap = constructColumnIndexMap(schema);
+        this.columnIndexToNameMap = constructColumnIndexMap(schema);
         // TODO: do a validation to make sure the values match with the schema
     }
 
     @Override
-    public ColumnVector getColumnVector(String columnName)
+    public int getSize()
     {
-        int columnOrdinal = columnNameToIndexMap.get(columnName);
-        StructField field = schema.get(columnName);
-        return new DefaultColumnVector(field.getDataType(), rows, columnOrdinal);
+        return rows.size();
     }
 
-    private static Map<String, Integer> constructColumnIndexMap(StructType schema) {
+    @Override
+    public ColumnarBatch slice(int start, int end)
+    {
+        return null;
+    }
+
+    @Override
+    public ColumnVector getColumnVector(int ordinal)
+    {
+        String columnName = columnIndexToNameMap.get(ordinal);
+        StructField field = schema.get(columnName);
+        return new DefaultColumnVector(field.getDataType(), rows, ordinal);
+    }
+
+    private static Map<Integer, String> constructColumnIndexMap(StructType schema) {
         // TODO: explore Java's zipWithIndex if available
-        Map<String, Integer> columnNameToIndexMap = new HashMap<>();
+        Map<Integer, String> columnIndexToNameMap = new HashMap<>();
         int index = 0;
         for (StructField field : schema.fields()) {
-            columnNameToIndexMap.put(field.getName(), index);
+            columnIndexToNameMap.put(index, field.getName());
             index++;
         }
-        return columnNameToIndexMap;
+        return columnIndexToNameMap;
     }
 }

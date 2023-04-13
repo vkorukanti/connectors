@@ -36,6 +36,8 @@ public class ScanImpl implements Scan {
     /** Mapping from partitionColumnName to its ordinal in the `snapshotSchema`. */
     private final Map<String, Integer> partitionColumnOrdinals;
 
+    private final Map<String, String> configuration;
+
     private final Optional<Expression> metadataFilterConjunction;
     private final Optional<Expression> dataFilterConjunction;
 
@@ -43,6 +45,7 @@ public class ScanImpl implements Scan {
             StructType snapshotSchema,
             StructType readSchema,
             StructType snapshotPartitionSchema,
+            Map<String, String> configuration,
             CloseableIterator<AddFile> filesIter,
             Optional<Expression> filter,
             Path dataPath,
@@ -50,6 +53,7 @@ public class ScanImpl implements Scan {
         this.snapshotSchema = snapshotSchema;
         this.readSchema = readSchema;
         this.snapshotPartitionSchema = snapshotPartitionSchema;
+        this.configuration = configuration;
         this.filesIter = filesIter;
         this.partitionColumnOrdinals = PartitionUtils.getPartitionOrdinals(snapshotSchema, snapshotPartitionSchema);
         this.dataPath = dataPath;
@@ -83,7 +87,16 @@ public class ScanImpl implements Scan {
             @Override
             protected Optional<ScanTask> accept(AddFile addFile) {
                 if (!metadataFilterConjunction.isPresent()) {
-                    return Optional.of(new ScanTaskImpl(dataPath, addFile, tableHelper));
+                    return Optional.of(
+                            new ScanTaskImpl(
+                                    dataPath,
+                                    addFile,
+                                    configuration,
+                                    snapshotSchema,
+                                    snapshotPartitionSchema,
+                                    tableHelper
+                            )
+                    );
                 }
 
                 // Perform Partition Pruning
@@ -91,7 +104,16 @@ public class ScanImpl implements Scan {
                 final boolean accept = (boolean) metadataFilterConjunction.get().eval(row);
 
                 if (accept) {
-                    return Optional.of(new ScanTaskImpl(dataPath, addFile, tableHelper));
+                    return Optional.of(
+                            new ScanTaskImpl(
+                                    dataPath,
+                                    addFile,
+                                    configuration,
+                                    snapshotSchema,
+                                    snapshotPartitionSchema,
+                                    tableHelper
+                            )
+                    );
                 }
 
                 return Optional.empty();

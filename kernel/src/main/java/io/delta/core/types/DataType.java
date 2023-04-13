@@ -5,6 +5,7 @@ import java.util.Locale;
 public abstract class DataType {
 
     public static DataType createPrimitive(String typeName) {
+        if (typeName.equals(IntegerType.INSTANCE.typeName())) return IntegerType.INSTANCE;
         if (typeName.equals(LongType.INSTANCE.typeName())) return LongType.INSTANCE;
         if (typeName.equals(StringType.INSTANCE.typeName())) return StringType.INSTANCE;
 

@@ -51,12 +51,14 @@ public class JsonRow implements Row {
         }
 
         if (dataType instanceof StringType) {
-            if (!jsonValue.isTextual()) {
-                throw new RuntimeException(
-                    String.format("Couldn't decode %s, expected a string", jsonValue)
-                );
-            }
-            return jsonValue.textValue();
+            // TODO: some of the metadata values for the schema can have a mix of string and
+            // non-strings in metadata map.
+            // if (!jsonValue.isTextual()) {
+            //    throw new RuntimeException(
+            //        String.format("Couldn't decode %s, expected a string", jsonValue)
+            //    );
+            // }
+            return jsonValue.asText();
         }
 
         if (dataType instanceof StructType) {

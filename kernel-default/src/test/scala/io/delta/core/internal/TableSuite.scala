@@ -20,7 +20,7 @@ import scala.collection.JavaConverters._
 
 import io.delta.core.Table
 import io.delta.core.expressions.{And, EqualTo, Literal}
-import io.delta.core.helpers.DefaultTableHelper
+import io.delta.core.helpers.{DefaultConnectorReadContext, DefaultTableHelper}
 import io.delta.core.util.GoldenTableUtils
 import org.scalatest.funsuite.AnyFunSuite
 
@@ -52,7 +52,10 @@ class TableSuite extends AnyFunSuite with GoldenTableUtils {
       val iter = snapshot.getScanBuilder().build().getTasks()
       while (iter.hasNext) {
         val task = iter.next()
-        val data = task.getData(snapshot.getSchema)
+        val data = task.getData(
+          DefaultConnectorReadContext.of(),
+          snapshot.getSchema
+        )
         while (data.hasNext) {
           val batch = data.next();
         }

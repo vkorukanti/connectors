@@ -1,14 +1,16 @@
 package io.delta.core.internal.replay;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import io.delta.core.data.ColumnarBatch;
+import io.delta.core.data.InputFile;
 import io.delta.core.data.Row;
 import io.delta.core.fs.FileStatus;
 import io.delta.core.fs.Path;
+import io.delta.core.helpers.ConnectorReadContext;
 import io.delta.core.helpers.TableHelper;
 import io.delta.core.internal.actions.Action;
 import io.delta.core.internal.actions.SingleAction;
@@ -109,12 +111,19 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
                 try {
                     if (nextPath.getName().endsWith(".json")) {
                         return new RowToActionIterator(
-                            tableHelper.readJsonFile(nextPath.toString(), SingleAction.READ_SCHEMA),
+                            tableHelper.readJsonFile(
+                                    new InputFile(nextPath.toString()),
+                                    SingleAction.READ_SCHEMA),
                             false // isFromCheckpoint
                         );
                     } else if (nextPath.getName().endsWith(".parquet")) {
-                        return new RowToActionIterator(
-                            tableHelper.readParquetFile(nextPath.toString(), SingleAction.READ_SCHEMA),
+                        return new ColumnarBatchToActionIterator(
+                            tableHelper.readParquetFile(
+                                    // TODO: This should be passed by the connector
+                                    new ConnectorReadContext(),
+                                    new InputFile(nextPath.toString()),
+                                    SingleAction.READ_SCHEMA,
+                                    new HashMap<>()),
                             true // isFromCheckpoint
                         );
                     } else {
@@ -122,7 +131,7 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
                             String.format("Unexpected log file path: %s", nextPath)
                         );
                     }
-                } catch (FileNotFoundException ex) {
+                } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
             }
@@ -130,31 +139,69 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
     }
 
     private class RowToActionIterator implements CloseableIterator<Tuple2<Action, Boolean>> {
-        private final CloseableIterator<Row> impl;
+        private final CloseableIterator<Row> rowIterator;
         private final boolean isFromCheckpoint;
 
         /** Requires that Row represents a SingleAction. */
-        public RowToActionIterator(CloseableIterator<Row> impl, boolean isFromCheckpoint) {
-            this.impl = impl;
+        public RowToActionIterator(CloseableIterator<Row> rowIterator, boolean isFromCheckpoint) {
+            this.rowIterator = rowIterator;
             this.isFromCheckpoint = isFromCheckpoint;
         }
 
         @Override
         public boolean hasNext() {
-            return impl.hasNext();
+            return rowIterator.hasNext();
         }
 
         @Override
         public Tuple2<Action, Boolean> next() {
             return new Tuple2<>(
-                SingleAction.fromRow(impl.next(), tableHelper).unwrap(),
+                    SingleAction.fromRow(rowIterator.next(), tableHelper).unwrap(),
+                    isFromCheckpoint
+            );
+        }
+
+        @Override
+        public void close() throws IOException {
+            // TODO: Use a safe close of the both Closeables
+            rowIterator.close();
+        }
+    }
+
+    private class ColumnarBatchToActionIterator
+            implements CloseableIterator<Tuple2<Action, Boolean>> {
+        private final CloseableIterator<ColumnarBatch> batchIterator;
+        private final boolean isFromCheckpoint;
+
+        private CloseableIterator<Row> currentBatchIterator;
+
+        /** Requires that Row represents a SingleAction. */
+        public ColumnarBatchToActionIterator(CloseableIterator<ColumnarBatch> batchIterator, boolean isFromCheckpoint) {
+            this.batchIterator = batchIterator;
+            this.isFromCheckpoint = isFromCheckpoint;
+        }
+
+        @Override
+        public boolean hasNext() {
+            if (currentBatchIterator == null && batchIterator.hasNext()) {
+                currentBatchIterator = batchIterator.next().getRows();
+            }
+            return currentBatchIterator != null && currentBatchIterator.hasNext();
+        }
+
+        @Override
+        public Tuple2<Action, Boolean> next() {
+            return new Tuple2<>(
+                SingleAction.fromRow(currentBatchIterator.next(), tableHelper).unwrap(),
                 isFromCheckpoint
             );
         }
 
         @Override
         public void close() throws IOException {
-            impl.close();
+            // TODO: Use a safe close of the both Closeables
+            currentBatchIterator.close();
+            batchIterator.close();
         }
     }
 }
