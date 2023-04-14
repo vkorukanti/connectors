@@ -2,6 +2,9 @@ package io.delta.core.data;
 
 import io.delta.core.types.DataType;
 
+import java.util.List;
+import java.util.Map;
+
 public class DefaultConstantVector implements ColumnVector
 {
     private final DataType dataType;
@@ -93,4 +96,23 @@ public class DefaultConstantVector implements ColumnVector
     {
         return (String) value;
     }
+
+    @Override
+    public <K, V> Map<K, V> getMap(int rowId)
+    {
+        return (Map<K, V>) value;
+    }
+
+    @Override
+    public Row getStruct(int rowId)
+    {
+        return (Row) value;
+    }
+
+    @Override
+    public <T> List<T> getArray(int rowId)
+    {
+        return (List<T>) value;
+    }
+
 }

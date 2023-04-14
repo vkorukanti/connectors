@@ -25,6 +25,12 @@ public class ParquetRowRecord implements Row
     }
 
     @Override
+    public StructType getSchema()
+    {
+        return schema;
+    }
+
+    @Override
     public boolean isNullAt(int ordinal)
     {
         return values[ordinal] == null;

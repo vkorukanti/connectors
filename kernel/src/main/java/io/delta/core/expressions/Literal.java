@@ -21,6 +21,8 @@ public final class Literal extends LeafExpression {
     public static final Literal FALSE = Literal.of(false);
 
     /**
+     * Create an integer {@link Literal} object
+     * @param value integer value
      * @return a {@link Literal} with data type {@link IntegerType}
      */
     public static Literal of(int value) {
@@ -28,6 +30,8 @@ public final class Literal extends LeafExpression {
     }
 
     /**
+     * Create a boolean {@link Literal} object
+     * @param value boolean value
      * @return a {@link Literal} with data type {@link BooleanType}
      */
     public static Literal of(boolean value) {
@@ -35,6 +39,8 @@ public final class Literal extends LeafExpression {
     }
 
     /**
+     * Create a long {@link Literal} object
+     * @param value long value
      * @return a {@link Literal} with data type {@link LongType}
      */
     public static Literal of(long value) {
@@ -42,6 +48,8 @@ public final class Literal extends LeafExpression {
     }
 
     /**
+     * Create a string {@link Literal} object
+     * @param value string value
      * @return a {@link Literal} with data type {@link StringType}
      */
     public static Literal of(String value) {

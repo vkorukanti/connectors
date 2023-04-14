@@ -7,7 +7,7 @@ import java.util.stream.Stream;
 import io.delta.core.expressions.And;
 import io.delta.core.expressions.Expression;
 import io.delta.core.internal.lang.ListUtils;
-import io.delta.core.internal.lang.Tuple2;
+import io.delta.core.utils.Tuple2;
 import io.delta.core.types.StructType;
 
 public class PartitionUtils {

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.delta.core.data.Row;
+import io.delta.core.types.StructType;
 
 /**
  * The type of Row that will be evaluated against {@link io.delta.core.expressions.Column}s.
@@ -25,6 +26,12 @@ public class PartitionRow implements Row {
             final String partitionColumnValue = partitionValuesMap.get(partitionColumnName);
             ordinalToValue.put(partitionColumnOrdinal, partitionColumnValue);
         }
+    }
+
+    @Override
+    public StructType getSchema()
+    {
+        return null;
     }
 
     @Override

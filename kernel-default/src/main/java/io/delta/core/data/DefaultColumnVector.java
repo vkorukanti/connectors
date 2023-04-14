@@ -4,6 +4,7 @@ import io.delta.core.types.DataType;
 import org.apache.parquet.Preconditions;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Wrapper around list of {@link Row}s to expose the rows as a columnar vector
@@ -100,6 +101,25 @@ public class DefaultColumnVector implements ColumnVector
     {
         assertValidRowId(rowId);
         return null; // TODO
+    }
+
+    @Override
+    public <K, V> Map<K, V> getMap(int rowId)
+    {
+        return null;
+    }
+
+    @Override
+    public Row getStruct(int rowId)
+    {
+        assertValidRowId(rowId);
+        return rows.get(rowId).getRecord(columnOrdinal);
+    }
+
+    @Override
+    public <T> List<T> getArray(int rowId)
+    {
+        return null;
     }
 
     @Override

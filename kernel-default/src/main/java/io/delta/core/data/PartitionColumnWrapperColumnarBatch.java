@@ -32,6 +32,12 @@ public class PartitionColumnWrapperColumnarBatch
     }
 
     @Override
+    public StructType getSchema()
+    {
+        return readSchema;
+    }
+
+    @Override
     public ColumnVector getColumnVector(int ordinal)
     {
         if (partitionColumnOrdinals.contains(ordinal)) {

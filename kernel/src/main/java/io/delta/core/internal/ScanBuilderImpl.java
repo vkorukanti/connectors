@@ -1,14 +1,18 @@
 package io.delta.core.internal;
 
-import java.util.Map;
 import java.util.Optional;
 
+import io.delta.core.InvalidExpressionException;
 import io.delta.core.Scan;
 import io.delta.core.ScanBuilder;
 import io.delta.core.expressions.Expression;
 import io.delta.core.fs.Path;
 import io.delta.core.helpers.TableHelper;
 import io.delta.core.internal.actions.AddFile;
+import io.delta.core.internal.actions.Metadata;
+import io.delta.core.internal.actions.Protocol;
+import io.delta.core.internal.lang.Lazy;
+import io.delta.core.utils.Tuple2;
 import io.delta.core.types.StructType;
 import io.delta.core.utils.CloseableIterator;
 
@@ -17,7 +21,7 @@ public class ScanBuilderImpl implements ScanBuilder {
     private final StructType snapshotSchema;
     private final StructType snapshotPartitionSchema;
     private final CloseableIterator<AddFile> filesIter;
-    private final Map<String, String> configuration;
+    private final Lazy<Tuple2<Protocol, Metadata>> protocolAndMetadata;
     private final TableHelper tableHelper;
     private final Path dataPath;
 
@@ -26,7 +30,7 @@ public class ScanBuilderImpl implements ScanBuilder {
 
     public ScanBuilderImpl(
             Path dataPath,
-            Map<String, String> configuration,
+            Lazy<Tuple2<Protocol, Metadata>> protocolAndMetadata,
             StructType snapshotSchema,
             StructType snapshotPartitionSchema,
             CloseableIterator<AddFile> filesIter,
@@ -35,7 +39,7 @@ public class ScanBuilderImpl implements ScanBuilder {
         this.snapshotSchema = snapshotSchema;
         this.snapshotPartitionSchema = snapshotPartitionSchema;
         this.filesIter = filesIter;
-        this.configuration = configuration;
+        this.protocolAndMetadata = protocolAndMetadata;
         this.tableHelper = tableHelper;
 
         this.readSchema = snapshotSchema;
@@ -43,16 +47,12 @@ public class ScanBuilderImpl implements ScanBuilder {
     }
 
     @Override
-    public ScanBuilder withReadSchema(StructType readSchema) {
-        // TODO: validate
-        this.readSchema = readSchema;
-        return this;
-    }
-
-    @Override
-    public ScanBuilder withFilter(Expression expression) {
-        this.filter = Optional.of(expression);
-        return this;
+    public Tuple2<ScanBuilder, Expression> applyFilter(Expression filter)
+            throws InvalidExpressionException
+    {
+        // TODO: for now return the complete expression as the remaining expression.
+        // Fix it later to return only non-partition column filter
+        return new Tuple2<>(this, filter);
     }
 
     @Override
@@ -61,7 +61,7 @@ public class ScanBuilderImpl implements ScanBuilder {
                 snapshotSchema,
                 readSchema,
                 snapshotPartitionSchema,
-                configuration,
+                protocolAndMetadata,
                 filesIter,
                 filter,
                 dataPath,

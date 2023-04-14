@@ -7,6 +7,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import io.delta.core.Snapshot;
 import io.delta.core.Table;
+import io.delta.core.TableVersionNotFoundException;
+import io.delta.core.helpers.ScanFileContext;
 import io.delta.core.helpers.TableHelper;
 import io.delta.core.internal.checkpoint.Checkpointer;
 import io.delta.core.fs.Path;
@@ -49,6 +51,13 @@ public class TableImpl implements Table, Logging {
         this.lock = new ReentrantLock();
         this.checkpointer = new Checkpointer(this);
         this.snapshotManager = new SnapshotManager(this);
+    }
+
+    @Override
+    public Snapshot getSnapshotAtVersion(long version)
+            throws TableVersionNotFoundException
+    {
+        throw new UnsupportedOperationException("Not yet implemented");
     }
 
     @Override

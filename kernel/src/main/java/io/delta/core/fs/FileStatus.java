@@ -33,4 +33,13 @@ public class FileStatus {
     public boolean equals(Object obj) {
         return super.equals(obj);
     }
+
+    public static FileStatus of(String path) {
+        // TODO: make the length and modification optional
+        return new FileStatus(path, 0, 0);
+    }
+
+    public static FileStatus of(String path, long size, long modificationTime) {
+        return new FileStatus(path, size, modificationTime);
+    }
 }

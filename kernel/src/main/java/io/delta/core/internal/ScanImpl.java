@@ -1,18 +1,27 @@
 package io.delta.core.internal;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import io.delta.core.Scan;
-import io.delta.core.ScanTask;
+import io.delta.core.data.ColumnarBatch;
+import io.delta.core.data.Row;
 import io.delta.core.expressions.Expression;
 import io.delta.core.fs.Path;
 import io.delta.core.helpers.TableHelper;
 import io.delta.core.internal.actions.AddFile;
+import io.delta.core.internal.actions.Metadata;
+import io.delta.core.internal.actions.Protocol;
+import io.delta.core.internal.data.AddFileColumnarBatch;
+import io.delta.core.internal.data.ScanStateColumnarBatch;
 import io.delta.core.internal.data.PartitionRow;
-import io.delta.core.internal.lang.FilteredCloseableIterator;
-import io.delta.core.internal.lang.Tuple2;
+import io.delta.core.internal.lang.Lazy;
+import io.delta.core.utils.Tuple2;
 import io.delta.core.internal.util.PartitionUtils;
 import io.delta.core.types.StructType;
 import io.delta.core.utils.CloseableIterator;
@@ -36,7 +45,7 @@ public class ScanImpl implements Scan {
     /** Mapping from partitionColumnName to its ordinal in the `snapshotSchema`. */
     private final Map<String, Integer> partitionColumnOrdinals;
 
-    private final Map<String, String> configuration;
+    private final Lazy<Tuple2<Protocol, Metadata>> protocolAndMetadata;
 
     private final Optional<Expression> metadataFilterConjunction;
     private final Optional<Expression> dataFilterConjunction;
@@ -45,7 +54,7 @@ public class ScanImpl implements Scan {
             StructType snapshotSchema,
             StructType readSchema,
             StructType snapshotPartitionSchema,
-            Map<String, String> configuration,
+            Lazy<Tuple2<Protocol, Metadata>> protocolAndMetadata,
             CloseableIterator<AddFile> filesIter,
             Optional<Expression> filter,
             Path dataPath,
@@ -53,7 +62,7 @@ public class ScanImpl implements Scan {
         this.snapshotSchema = snapshotSchema;
         this.readSchema = readSchema;
         this.snapshotPartitionSchema = snapshotPartitionSchema;
-        this.configuration = configuration;
+        this.protocolAndMetadata = protocolAndMetadata;
         this.filesIter = filesIter;
         this.partitionColumnOrdinals = PartitionUtils.getPartitionOrdinals(snapshotSchema, snapshotPartitionSchema);
         this.dataPath = dataPath;
@@ -81,43 +90,81 @@ public class ScanImpl implements Scan {
         System.out.println("ScanImpl: dataFilterConjunction: " + dataFilterConjunction.toString());
     }
 
-    @Override
-    public CloseableIterator<ScanTask> getTasks() {
-        return new FilteredCloseableIterator<ScanTask, AddFile>(filesIter) {
+    /**
+     * Get an iterator of data files in this version of scan that survived the predicate pruning.
+     *
+     * @return data in {@link ColumnarBatch} batch format. Each row correspond to one survived file.
+     */
+    public CloseableIterator<ColumnarBatch> getScanFiles() {
+        return new CloseableIterator<ColumnarBatch>() {
+            private Optional<AddFile> nextValid = Optional.empty();
+            private boolean closed;
+
             @Override
-            protected Optional<ScanTask> accept(AddFile addFile) {
+            public boolean hasNext() {
+                if (closed) {
+                    throw new IllegalStateException("Can't call `hasNext` on a closed iterator.");
+                }
+                if (!nextValid.isPresent()) {
+                    nextValid = findNextValid();
+                }
+                return nextValid.isPresent();
+            }
+
+            @Override
+            public ColumnarBatch next() {
+                if (closed) {
+                    throw new IllegalStateException("Can't call `next` on a closed iterator.");
+                }
+                if (!hasNext()) throw new NoSuchElementException();
+
+                List<AddFile> batchAddFiles = new ArrayList<>();
+                do {
+                    batchAddFiles.add(nextValid.get());
+                    nextValid = Optional.empty();
+                } while (batchAddFiles.size() < 8 && hasNext());
+                return new AddFileColumnarBatch(Collections.unmodifiableList(batchAddFiles));
+            }
+
+            @Override
+            public void close() throws IOException {
+                filesIter.close();
+                this.closed = true;
+            }
+
+            private Optional<AddFile> findNextValid() {
+                while (filesIter.hasNext()) {
+                    final Optional<AddFile> acceptedElementOpt = accept(filesIter.next());
+                    if (acceptedElementOpt.isPresent()) return acceptedElementOpt;
+                }
+
+                return Optional.empty();
+            }
+
+            private Optional<AddFile> accept(AddFile addFile) {
                 if (!metadataFilterConjunction.isPresent()) {
-                    return Optional.of(
-                            new ScanTaskImpl(
-                                    dataPath,
-                                    addFile,
-                                    configuration,
-                                    snapshotSchema,
-                                    snapshotPartitionSchema,
-                                    tableHelper
-                            )
-                    );
+                    return Optional.of(addFile);
                 }
 
                 // Perform Partition Pruning
                 final PartitionRow row = new PartitionRow(partitionColumnOrdinals, addFile.getPartitionValues());
-                final boolean accept = (boolean) metadataFilterConjunction.get().eval(row);
-
-                if (accept) {
-                    return Optional.of(
-                            new ScanTaskImpl(
-                                    dataPath,
-                                    addFile,
-                                    configuration,
-                                    snapshotSchema,
-                                    snapshotPartitionSchema,
-                                    tableHelper
-                            )
-                    );
+                if ((boolean) metadataFilterConjunction.get().eval(row)) {
+                    return Optional.of(addFile);
                 }
 
                 return Optional.empty();
             }
         };
+    }
+
+    /**
+     * Get the scan state associate with the current scan. This state is common to all survived
+     * files.
+     */
+    public Row getScanState() {
+        return new ScanStateColumnarBatch(
+            protocolAndMetadata.get()._2,
+            protocolAndMetadata.get()._1,
+            dataPath.toUri().toString()).getRows().next();
     }
 }

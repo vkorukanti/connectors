@@ -8,12 +8,15 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.delta.core.types.*;
 
 public class JsonRow implements Row {
-
     ////////////////////////////////////////////////////////////////////////////////
     // Static Methods
     ////////////////////////////////////////////////////////////////////////////////
 
     private static Object decodeElement(JsonNode jsonValue, DataType dataType) {
+        if (jsonValue.isNull()) {
+            return null;
+        }
+
         if (dataType instanceof UnresolvedDataType) {
             if (jsonValue.isTextual()) {
                 return jsonValue.textValue();
@@ -156,6 +159,12 @@ public class JsonRow implements Row {
     ////////////////////////////////////////
     // Public APIs
     ////////////////////////////////////////
+
+    @Override
+    public StructType getSchema()
+    {
+        return readSchema;
+    }
 
     @Override
     public boolean isNullAt(int ordinal) {

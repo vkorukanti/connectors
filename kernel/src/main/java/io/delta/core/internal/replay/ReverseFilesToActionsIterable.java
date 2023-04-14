@@ -5,17 +5,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import io.delta.core.ColumnMappingMode;
 import io.delta.core.data.ColumnarBatch;
-import io.delta.core.data.InputFile;
 import io.delta.core.data.Row;
 import io.delta.core.fs.FileStatus;
 import io.delta.core.fs.Path;
-import io.delta.core.helpers.ConnectorReadContext;
+import io.delta.core.helpers.ScanFileContext;
 import io.delta.core.helpers.TableHelper;
 import io.delta.core.internal.actions.Action;
 import io.delta.core.internal.actions.SingleAction;
 import io.delta.core.internal.lang.CloseableIterable;
-import io.delta.core.internal.lang.Tuple2;
+import io.delta.core.utils.Tuple2;
 import io.delta.core.utils.CloseableIterator;
 
 public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<Action, Boolean>> {
@@ -23,7 +23,9 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
     private final TableHelper tableHelper;
     private final List<FileStatus> reverseSortedFiles;
 
-    public ReverseFilesToActionsIterable(TableHelper tableHelper, Stream<FileStatus> filesUnsorted) {
+    public ReverseFilesToActionsIterable(
+            TableHelper tableHelper,
+            Stream<FileStatus> filesUnsorted) {
         this.tableHelper = tableHelper;
         this.reverseSortedFiles = filesUnsorted
             .sorted(Comparator.comparing((FileStatus a) -> a.getPath().getName()).reversed())
@@ -112,16 +114,16 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
                     if (nextPath.getName().endsWith(".json")) {
                         return new RowToActionIterator(
                             tableHelper.readJsonFile(
-                                    new InputFile(nextPath.toString()),
+                                    FileStatus.of(nextPath.toString()),
                                     SingleAction.READ_SCHEMA),
                             false // isFromCheckpoint
                         );
                     } else if (nextPath.getName().endsWith(".parquet")) {
                         return new ColumnarBatchToActionIterator(
                             tableHelper.readParquetFile(
-                                    // TODO: This should be passed by the connector
-                                    new ConnectorReadContext(),
-                                    new InputFile(nextPath.toString()),
+                                    FileStatus.of(nextPath.toString()),
+                                    Optional.empty(),
+                                    ColumnMappingMode.NONE,
                                     SingleAction.READ_SCHEMA,
                                     new HashMap<>()),
                             true // isFromCheckpoint
@@ -139,24 +141,34 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
     }
 
     private class RowToActionIterator implements CloseableIterator<Tuple2<Action, Boolean>> {
-        private final CloseableIterator<Row> rowIterator;
+        private final CloseableIterator<ColumnarBatch> columnarBatchIter;
         private final boolean isFromCheckpoint;
+        private CloseableIterator<Row> currentRowIter;
 
         /** Requires that Row represents a SingleAction. */
-        public RowToActionIterator(CloseableIterator<Row> rowIterator, boolean isFromCheckpoint) {
-            this.rowIterator = rowIterator;
+        public RowToActionIterator(
+                CloseableIterator<ColumnarBatch> columnarBatchIter,
+                boolean isFromCheckpoint) {
+            this.columnarBatchIter = columnarBatchIter;
             this.isFromCheckpoint = isFromCheckpoint;
         }
 
         @Override
         public boolean hasNext() {
-            return rowIterator.hasNext();
+            if (currentRowIter == null || !currentRowIter.hasNext()) {
+                if (!columnarBatchIter.hasNext()) {
+                    return false;
+                }
+                ColumnarBatch nextBatch = columnarBatchIter.next();
+                currentRowIter = nextBatch.getRows();
+            }
+            return currentRowIter.hasNext();
         }
 
         @Override
         public Tuple2<Action, Boolean> next() {
             return new Tuple2<>(
-                    SingleAction.fromRow(rowIterator.next(), tableHelper).unwrap(),
+                    SingleAction.fromRow(currentRowIter.next(), tableHelper).unwrap(),
                     isFromCheckpoint
             );
         }
@@ -164,7 +176,8 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
         @Override
         public void close() throws IOException {
             // TODO: Use a safe close of the both Closeables
-            rowIterator.close();
+            currentRowIter.close();
+            columnarBatchIter.close();
         }
     }
 

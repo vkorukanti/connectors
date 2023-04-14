@@ -25,6 +25,16 @@ public class Protocol implements Action {
         this.minWriterVersion = minWriterVersion;
     }
 
+    public int getMinReaderVersion()
+    {
+        return minReaderVersion;
+    }
+
+    public int getMinWriterVersion()
+    {
+        return minWriterVersion;
+    }
+
     @Override
     public String toString() {
         return String.format("Protocol(%s,%s)", minReaderVersion, minWriterVersion);

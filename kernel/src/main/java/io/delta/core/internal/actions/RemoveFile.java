@@ -25,6 +25,6 @@ public class RemoveFile extends FileAction {
 
     @Override
     public RemoveFile copyWithDataChange(boolean dataChange) {
-        return null;
+         return new RemoveFile(path, dataChange);
     }
 }

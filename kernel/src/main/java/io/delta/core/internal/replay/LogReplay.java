@@ -1,18 +1,17 @@
 package io.delta.core.internal.replay;
 
 import java.io.IOException;
-import java.net.URI;
-import java.util.HashMap;
 import java.util.stream.Stream;
 
 import io.delta.core.fs.FileStatus;
 import io.delta.core.fs.Path;
+import io.delta.core.helpers.ScanFileContext;
 import io.delta.core.helpers.TableHelper;
 import io.delta.core.internal.actions.*;
 import io.delta.core.internal.lang.CloseableIterable;
 import io.delta.core.internal.lang.Lazy;
 import io.delta.core.internal.snapshot.LogSegment;
-import io.delta.core.internal.lang.Tuple2;
+import io.delta.core.utils.Tuple2;
 import io.delta.core.utils.CloseableIterator;
 
 public class LogReplay {
@@ -21,13 +20,18 @@ public class LogReplay {
     private final CloseableIterable<Tuple2<Action, Boolean>> reverseActionsIterable;
     private final Lazy<Tuple2<Protocol, Metadata>> protocolAndMetadata;
 
-    public LogReplay(Path logPath, TableHelper tableHelper, LogSegment logSegment) {
+    public LogReplay(
+            Path logPath,
+            TableHelper tableHelper,
+            LogSegment logSegment) {
         this.logSegment = logSegment;
 
         final Stream<FileStatus> allFiles = Stream.concat(logSegment.checkpoints.stream(), logSegment.deltas.stream());
         assertLogFilesBelongToTable(logPath, allFiles);
 
-        this.reverseActionsIterable = new ReverseFilesToActionsIterable(tableHelper, allFiles);
+        this.reverseActionsIterable = new ReverseFilesToActionsIterable(
+                tableHelper,
+                allFiles);
         this.protocolAndMetadata = new Lazy<>(this::loadTableProtocolAndMetadata);
     }
 

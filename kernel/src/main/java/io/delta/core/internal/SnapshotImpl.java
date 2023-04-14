@@ -7,7 +7,7 @@ import io.delta.core.internal.actions.AddFile;
 import io.delta.core.internal.actions.Metadata;
 import io.delta.core.internal.actions.Protocol;
 import io.delta.core.internal.lang.Lazy;
-import io.delta.core.internal.lang.Tuple2;
+import io.delta.core.utils.Tuple2;
 import io.delta.core.internal.replay.LogReplay;
 import io.delta.core.internal.snapshot.LogSegment;
 import io.delta.core.types.StructType;
@@ -38,7 +38,10 @@ public class SnapshotImpl implements Snapshot {
         this.tableImpl = tableImpl;
         this.timestamp = timestamp;
 
-        this.logReplay = new LogReplay(logPath, tableImpl.tableHelper, logSegment);
+        this.logReplay = new LogReplay(
+                logPath,
+                tableImpl.tableHelper,
+                logSegment);
         this.protocolAndMetadata = logReplay.lazyLoadProtocolAndMetadata();
     }
 
@@ -60,7 +63,7 @@ public class SnapshotImpl implements Snapshot {
     public ScanBuilder getScanBuilder() {
         return new ScanBuilderImpl(
             dataPath,
-            protocolAndMetadata.get()._2.getConfiguration(),
+            protocolAndMetadata,
             getSchema(),
             getMetadata().getPartitionSchema(),
             logReplay.getAddFiles(),
