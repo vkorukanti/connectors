@@ -24,6 +24,12 @@ public class DefaultColumnarBatch implements ColumnarBatch
     }
 
     @Override
+    public StructType getSchema()
+    {
+        return schema;
+    }
+
+    @Override
     public int getSize()
     {
         return rows.size();

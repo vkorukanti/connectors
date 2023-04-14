@@ -80,4 +80,11 @@ public interface ColumnVector extends AutoCloseable {
      * should return null.
      */
     String getString(int rowId);
+
+    /** TODO: Revisit the complex type access methods */
+    Object getMap(int rowId);
+
+    Object getStruct(int rowId);
+
+    Object getArray(int rowId);
 }

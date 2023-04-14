@@ -103,6 +103,24 @@ public class DefaultColumnVector implements ColumnVector
     }
 
     @Override
+    public Object getMap(int rowId)
+    {
+        return null;
+    }
+
+    @Override
+    public Object getStruct(int rowId)
+    {
+        return null;
+    }
+
+    @Override
+    public Object getArray(int rowId)
+    {
+        return null;
+    }
+
+    @Override
     public String getString(int rowId)
     {
         assertValidRowId(rowId);

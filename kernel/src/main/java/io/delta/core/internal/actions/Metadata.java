@@ -26,7 +26,7 @@ public class Metadata implements Action {
         Row schemaRow = tableHelper.parseJson(schemaJson, StructType.READ_SCHEMA);
         StructType schema = StructType.fromRow(schemaRow);
 
-        return new Metadata(schema, partitionColumns, configuration);
+        return new Metadata(schemaJson, schema, partitionColumns, configuration);
     }
 
     public static final StructType READ_SCHEMA = new StructType()
@@ -52,17 +52,25 @@ public class Metadata implements Action {
     // configuration
     // createdTime
 
+    private final String schemaString; // TODO: Temporary
     private final StructType schema;
     private final List<String> partitionColumns;
     private final Map<String, String> configuration;
 
     public Metadata(
+            String schemaString,
             StructType schema,
             List<String> partitionColumns,
             Map<String, String> configuration) {
+        this.schemaString = schemaString;
         this.schema = schema;
         this.partitionColumns = partitionColumns;
         this.configuration = configuration;
+    }
+
+    public String getSchemaString()
+    {
+        return schemaString;
     }
 
     public StructType getSchema() {

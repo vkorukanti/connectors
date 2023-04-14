@@ -9,4 +9,6 @@ public interface Snapshot {
     StructType getSchema();
 
     ScanBuilder getScanBuilder();
+
+    ScanState getScanState();
 }

@@ -93,4 +93,22 @@ public class DefaultConstantVector implements ColumnVector
     {
         return (String) value;
     }
+
+    @Override
+    public Object getMap(int rowId)
+    {
+        return value;
+    }
+
+    @Override
+    public Object getStruct(int rowId)
+    {
+        return value;
+    }
+
+    @Override
+    public Object getArray(int rowId)
+    {
+        return value;
+    }
 }

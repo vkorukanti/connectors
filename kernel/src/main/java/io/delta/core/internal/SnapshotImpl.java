@@ -1,6 +1,7 @@
 package io.delta.core.internal;
 
 import io.delta.core.ScanBuilder;
+import io.delta.core.ScanState;
 import io.delta.core.Snapshot;
 import io.delta.core.fs.Path;
 import io.delta.core.internal.actions.AddFile;
@@ -60,12 +61,18 @@ public class SnapshotImpl implements Snapshot {
     public ScanBuilder getScanBuilder() {
         return new ScanBuilderImpl(
             dataPath,
-            protocolAndMetadata.get()._2.getConfiguration(),
+            protocolAndMetadata,
             getSchema(),
             getMetadata().getPartitionSchema(),
             logReplay.getAddFiles(),
             tableImpl.tableHelper
         );
+    }
+
+    @Override
+    public ScanState getScanState()
+    {
+        return new ScanStateImpl(tableImpl.tableHelper);
     }
 
     ////////////////////////////////////////
