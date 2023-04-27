@@ -3,6 +3,9 @@ package io.delta.core.data;
 import io.delta.core.types.StructType;
 import io.delta.core.utils.CloseableIterator;
 
+/**
+ * Represents zero or more rows of records with same schema type.
+ */
 public interface ColumnarBatch {
     /**
      * @return the schema of the data in this batch.

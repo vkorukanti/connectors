@@ -14,7 +14,7 @@ import io.delta.core.internal.checkpoint.CheckpointMetaData;
 import io.delta.core.internal.checkpoint.Checkpointer;
 import io.delta.core.internal.checksum.VersionChecksum;
 import io.delta.core.internal.lang.ListUtils;
-import io.delta.core.internal.lang.Tuple2;
+import io.delta.core.utils.Tuple2;
 import io.delta.core.internal.util.FileNames;
 import io.delta.core.internal.util.Logging;
 import io.delta.core.utils.CloseableIterator;

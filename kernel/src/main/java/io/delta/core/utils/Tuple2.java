@@ -1,4 +1,4 @@
-package io.delta.core.internal.lang;
+package io.delta.core.utils;
 
 import java.util.Objects;
 

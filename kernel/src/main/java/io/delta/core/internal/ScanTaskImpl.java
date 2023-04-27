@@ -1,10 +1,8 @@
 package io.delta.core.internal;
 
-import io.delta.core.ScanTask;
 import io.delta.core.data.ColumnarBatch;
 import io.delta.core.data.InputFile;
 import io.delta.core.fs.Path;
-import io.delta.core.helpers.ConnectorReadContext;
 import io.delta.core.helpers.TableHelper;
 import io.delta.core.internal.actions.AddFile;
 import io.delta.core.types.ArrayType;

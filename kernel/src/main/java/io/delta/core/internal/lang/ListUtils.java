@@ -1,5 +1,7 @@
 package io.delta.core.internal.lang;
 
+import io.delta.core.utils.Tuple2;
+
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;

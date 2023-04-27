@@ -5,6 +5,6 @@ package io.delta.core.helpers;
  * core from the connector calls to Delta core API and to the connector
  * implementation of the {@link TableHelper}.
  */
-public class ConnectorReadContext
+public class ScanEnvironment
 {
 }

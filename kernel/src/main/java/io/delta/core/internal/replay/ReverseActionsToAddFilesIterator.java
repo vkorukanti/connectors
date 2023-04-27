@@ -8,7 +8,7 @@ import io.delta.core.internal.actions.Action;
 import io.delta.core.internal.actions.AddFile;
 import io.delta.core.internal.actions.RemoveFile;
 import io.delta.core.internal.lang.FilteredCloseableIterator;
-import io.delta.core.internal.lang.Tuple2;
+import io.delta.core.utils.Tuple2;
 import io.delta.core.utils.CloseableIterator;
 
 public class ReverseActionsToAddFilesIterator

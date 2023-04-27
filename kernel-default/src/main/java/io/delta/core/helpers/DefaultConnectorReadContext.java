@@ -9,7 +9,6 @@ import static java.util.Objects.requireNonNull;
  * Implementation of {@link ConnectorReadContext} for connectors using Hadoop based file reading.
  */
 public class DefaultConnectorReadContext
-    extends ConnectorReadContext
 {
     // An example use case where the task read is passing a dynamic filter information.
     private final Expression dynamicFilter;

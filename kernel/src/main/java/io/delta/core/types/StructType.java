@@ -5,7 +5,7 @@ import java.util.stream.Collectors;
 
 import io.delta.core.data.Row;
 import io.delta.core.expressions.Column;
-import io.delta.core.internal.lang.Tuple2;
+import io.delta.core.utils.Tuple2;
 
 public final class StructType extends DataType {
 

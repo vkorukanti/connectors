@@ -1,8 +1,6 @@
 package io.delta.core.internal.replay;
 
 import java.io.IOException;
-import java.net.URI;
-import java.util.HashMap;
 import java.util.stream.Stream;
 
 import io.delta.core.fs.FileStatus;
@@ -12,7 +10,7 @@ import io.delta.core.internal.actions.*;
 import io.delta.core.internal.lang.CloseableIterable;
 import io.delta.core.internal.lang.Lazy;
 import io.delta.core.internal.snapshot.LogSegment;
-import io.delta.core.internal.lang.Tuple2;
+import io.delta.core.utils.Tuple2;
 import io.delta.core.utils.CloseableIterator;
 
 public class LogReplay {

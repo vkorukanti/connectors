@@ -2,6 +2,12 @@ package io.delta.core.data;
 
 import io.delta.core.types.DataType;
 
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Represents zero or more values of a single column.
+ */
 public interface ColumnVector extends AutoCloseable {
     /**
      * Returns the data type of this column vector.
@@ -81,10 +87,9 @@ public interface ColumnVector extends AutoCloseable {
      */
     String getString(int rowId);
 
-    /** TODO: Revisit the complex type access methods */
-    Object getMap(int rowId);
+    <K, V> Map<K, V> getMap(int rowId);
 
-    Object getStruct(int rowId);
+    Row getStruct(int rowId);
 
-    Object getArray(int rowId);
+    <T> List<T> getArray(int rowId);
 }

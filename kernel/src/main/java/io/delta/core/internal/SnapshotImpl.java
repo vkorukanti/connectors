@@ -1,14 +1,14 @@
 package io.delta.core.internal;
 
 import io.delta.core.ScanBuilder;
-import io.delta.core.ScanState;
+import io.delta.core.ScanFileReader;
 import io.delta.core.Snapshot;
 import io.delta.core.fs.Path;
 import io.delta.core.internal.actions.AddFile;
 import io.delta.core.internal.actions.Metadata;
 import io.delta.core.internal.actions.Protocol;
 import io.delta.core.internal.lang.Lazy;
-import io.delta.core.internal.lang.Tuple2;
+import io.delta.core.utils.Tuple2;
 import io.delta.core.internal.replay.LogReplay;
 import io.delta.core.internal.snapshot.LogSegment;
 import io.delta.core.types.StructType;
@@ -70,9 +70,9 @@ public class SnapshotImpl implements Snapshot {
     }
 
     @Override
-    public ScanState getScanState()
+    public ScanFileReader getScanState()
     {
-        return new ScanStateImpl(tableImpl.tableHelper);
+        return new ScanFileReaderImpl(tableImpl.tableHelper);
     }
 
     ////////////////////////////////////////

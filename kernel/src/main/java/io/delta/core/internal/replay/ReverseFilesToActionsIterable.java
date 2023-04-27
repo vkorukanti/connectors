@@ -10,12 +10,11 @@ import io.delta.core.data.InputFile;
 import io.delta.core.data.Row;
 import io.delta.core.fs.FileStatus;
 import io.delta.core.fs.Path;
-import io.delta.core.helpers.ConnectorReadContext;
 import io.delta.core.helpers.TableHelper;
 import io.delta.core.internal.actions.Action;
 import io.delta.core.internal.actions.SingleAction;
 import io.delta.core.internal.lang.CloseableIterable;
-import io.delta.core.internal.lang.Tuple2;
+import io.delta.core.utils.Tuple2;
 import io.delta.core.utils.CloseableIterator;
 
 public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<Action, Boolean>> {
