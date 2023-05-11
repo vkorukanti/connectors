@@ -213,8 +213,12 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
         @Override
         public void close() throws IOException {
             // TODO: Use a safe close of the both Closeables
-            currentBatchIterator.close();
-            batchIterator.close();
+            if (currentBatchIterator != null) {
+                currentBatchIterator.close();
+            }
+            if (batchIterator != null) {
+                batchIterator.close();
+            }
         }
     }
 }

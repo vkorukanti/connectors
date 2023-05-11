@@ -64,6 +64,55 @@ class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
     }
   }
 
+  test("end-to-end usage: reading a table with checkpoint") {
+    withGoldenTable("basic-with-checkpoint") { path =>
+      val table = Table.forPath(path, DefaultTableHelper.create())
+      val snapshot = table.getLatestSnapshot
+
+      // Contains both the data schema and partition schema
+      val tableSchema = snapshot.getSchema
+
+      // Go through the tableSchema and select the columns interested in reading
+      val readSchema = new StructType().add("id", LongType.INSTANCE)
+      val filter = Literal.TRUE
+
+      val scanObject = scan(snapshot, readSchema, filter)
+
+      val fileIter = scanObject.getScanFiles
+      val scanState = scanObject.getScanState;
+
+      // There should be just one element in the scan state
+      val serializedScanState = convertColumnarBatchRowToJSON(scanState)
+
+      val testScanFileContext = new DefaultScanFileContext
+
+      val actualValueColumnValues = ArrayBuffer[Long]()
+      while(fileIter.hasNext) {
+        val fileColumnarBatch = fileIter.next()
+        Seq.range(start = 0, end = fileColumnarBatch.getSize).foreach(rowId => {
+          val serializedFileInfo = convertColumnarBatchRowToJSON(fileColumnarBatch, rowId)
+
+          // START OF THE CODE THAT WILL BE EXECUTED ON THE EXECUTOR
+          val dataBatches = ScanFileReader.readData(
+            convertJSONToRow(serializedFileInfo, fileColumnarBatch.getSchema),
+            convertJSONToRow(serializedScanState, scanState.getSchema),
+            Optional.of(testScanFileContext),
+            DefaultTableHelper.create(),
+            readSchema
+          )
+
+          while(dataBatches.hasNext) {
+            val batch = dataBatches.next()
+            val valueColVector = batch.getColumnVector(0)
+            actualValueColumnValues.append(vectorToLongs(valueColVector): _*)
+          }
+          // END OF THE CODE THAT WILL BE EXECUTED ON THE EXECUTOR
+        })
+      }
+      assert(actualValueColumnValues.toSet === Seq.range(start = 0, end = 20).toSet)
+    }
+  }
+
   private def convertColumnarBatchRowToJSON(columnarBatch: ColumnarBatch, rowIndex: Int): String = {
     val rowObject = new java.util.HashMap[String, Object]()
 
