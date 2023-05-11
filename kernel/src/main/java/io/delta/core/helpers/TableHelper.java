@@ -1,5 +1,6 @@
 package io.delta.core.helpers;
 
+import java.io.DataInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Map;
@@ -63,6 +64,15 @@ public interface TableHelper
             Map<String, String> partitionValues) throws IOException;
 
     /**
+     * Open the given file for reading and return an input stream
+     * @param file to be opened
+     * @return {@link DataInputStream}. It is the responsibility of the caller to close the stream
+     *         once done with it.
+     * @throws IOException If an error occurs in opening the given file.
+     */
+    DataInputStream readFile(FileStatus file) throws IOException;
+
+    /**
      * Return an expression evaluator for given schema and expression. The returned evaluator takes
      * a {@link ColumnarBatch} as input and returns the expression output as a {@link ColumnVector}.
      *
@@ -71,9 +81,7 @@ public interface TableHelper
      * @param expression to evaluate.
      * @return {@link ExpressionEvaluator}
      */
-    default ExpressionEvaluator getExpressionEvaluator(StructType schema, Expression expression) {
-        throw new UnsupportedOperationException("Not yet implemented");
-    }
+    ExpressionEvaluator getExpressionEvaluator(StructType schema, Expression expression);
 
     /**
      * Helper method to parse the JSON given as string and return the result as {@link Row}.

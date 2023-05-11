@@ -1,5 +1,6 @@
 package io.delta.core.helpers;
 
+import java.io.DataInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -142,6 +143,12 @@ public class DefaultTableHelper implements TableHelper {
         ParquetBatchReader batchReader = new ParquetBatchReader(hadoopConf);
         return batchReader.read(file.getPath().toString(), dataColumnSchema);
         // TODO: wrap the regular columnar batch iterator in a partition column generator
+    }
+
+    @Override
+    public DataInputStream readFile(FileStatus file) throws IOException
+    {
+        throw new UnsupportedOperationException("Not yet implemented");
     }
 
     @Override
