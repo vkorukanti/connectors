@@ -40,9 +40,10 @@ public class ScanFile
      * Get the data from a given scan files with using the connector provider {@link TableClient}.
      *
      * @param tableClient Connector provided {@link TableClient} implementation.
-     * @param scanState Scan state returned by {@link Scan#getScanState()}
+     * @param scanState Scan state returned by {@link Scan#getScanState(TableClient)}
      * @param scanFileRows an iterator of {@link Row}s. Each {@link Row} represents one scan file
-     *                 from the {@link ColumnarBatch} returned by {@link Scan#getScanFiles()}
+     *                     from the {@link ColumnarBatch} returned by
+     *                     {@link Scan#getScanFiles(TableClient)}
      * @param predicate An optional predicate that can be used for data skipping while reading the
      *                  scan files.
      * @return Data read from the scan file as an iterator of {@link ColumnarBatch}es and

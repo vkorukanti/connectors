@@ -23,16 +23,19 @@ public interface Table {
     /**
      * Get the snapshot of the table with given version.
      *
+     * @param tableClient {@link TableClient} instance to use in Delta Kernel.
      * @param version table version number
      * @return an instance of {@link Snapshot} for given version
      * @throws TableVersionNotFoundException when the version is not valid
      */
-    Snapshot getSnapshotAtVersion(long version)
+    Snapshot getSnapshotAtVersion(TableClient tableClient, long version)
         throws TableVersionNotFoundException;
 
     /**
      * Get the latest snapshot of the table.
+     * 
+     * @param tableClient {@link TableClient} instance to use in Delta Kernel.
      * @return an instance of {@link Snapshot}
      */
-    Snapshot getLatestSnapshot();
+    Snapshot getLatestSnapshot(TableClient tableClient);
 }
