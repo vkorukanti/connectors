@@ -3,10 +3,10 @@ package io.delta.kernel.internal.replay;
 import java.io.IOException;
 import java.util.stream.Stream;
 
+import io.delta.kernel.client.TableClient;
 import io.delta.kernel.fs.FileStatus;
 import io.delta.kernel.fs.Path;
-import io.delta.kernel.helpers.TableHelper;
-import io.delta.core.internal.actions.*;
+import io.delta.kernel.internal.actions.*;
 import io.delta.kernel.internal.actions.Action;
 import io.delta.kernel.internal.actions.AddFile;
 import io.delta.kernel.internal.actions.Metadata;
@@ -25,7 +25,7 @@ public class LogReplay {
 
     public LogReplay(
             Path logPath,
-            TableHelper tableHelper,
+            TableClient tableHelper,
             LogSegment logSegment) {
         this.logSegment = logSegment;
 

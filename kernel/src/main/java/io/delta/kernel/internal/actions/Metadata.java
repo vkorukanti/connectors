@@ -4,9 +4,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import io.delta.kernel.client.TableClient;
 import io.delta.kernel.data.Row;
-import io.delta.kernel.helpers.TableHelper;
-import io.delta.core.types.*;
+import io.delta.kernel.types.*;
 import io.delta.kernel.types.ArrayType;
 import io.delta.kernel.types.LongType;
 import io.delta.kernel.types.MapType;
@@ -19,7 +19,7 @@ public class Metadata implements Action {
     // Static Fields / Methods
     ////////////////////////////////////////////////////////////////////////////////
 
-    public static Metadata fromRow(Row row, TableHelper tableHelper) {
+    public static Metadata fromRow(Row row, TableClient tableHelper) {
         if (row == null) return null;
         final String id = row.getString(0);
         final String name = row.getString(1);

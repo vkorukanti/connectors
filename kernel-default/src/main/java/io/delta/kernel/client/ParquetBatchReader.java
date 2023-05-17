@@ -1,4 +1,4 @@
-package io.delta.kernel.helpers;
+package io.delta.kernel.client;
 
 import io.delta.kernel.data.ColumnarBatch;
 import io.delta.kernel.data.DefaultColumnarBatch;

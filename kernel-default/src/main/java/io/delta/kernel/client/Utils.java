@@ -1,4 +1,4 @@
-package io.delta.kernel.helpers;
+package io.delta.kernel.client;
 
 import io.delta.kernel.types.DataType;
 import io.delta.kernel.types.StructField;

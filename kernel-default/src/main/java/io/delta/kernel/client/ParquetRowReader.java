@@ -1,6 +1,5 @@
-package io.delta.kernel.helpers;
+package io.delta.kernel.client;
 
-import io.delta.kernel.data.ParquetRowRecord;
 import io.delta.kernel.data.ParquetRowRecord;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.types.DataType;

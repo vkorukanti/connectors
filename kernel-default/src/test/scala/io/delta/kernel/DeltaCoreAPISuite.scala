@@ -13,7 +13,7 @@ import io.delta.core.types._
 import io.delta.kernel.data.{ColumnarBatch, ColumnVector, JsonRow, Row}
 import io.delta.kernel.expressions.{Expression, Literal}
 import io.delta.kernel.{Scan, ScanFile, Snapshot, Table}
-import io.delta.kernel.helpers.{DefaultScanFileContext, DefaultTableHelper}
+import io.delta.kernel.client.{DefaultScanFileContext, DefaultTableClient}
 import io.delta.kernel.types.{ArrayType, BooleanType, IntegerType, LongType, MapType, StringType, StructType}
 import io.delta.kernel.util.GoldenTableUtils
 import org.scalatest.funsuite.AnyFunSuite
@@ -21,7 +21,7 @@ import org.scalatest.funsuite.AnyFunSuite
 class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
   test("end-to-end usage: reading a table") {
     withGoldenTable("delta-table") { path =>
-      val table = Table.forPath(path, DefaultTableHelper.create())
+      val table = Table.forPath(path, DefaultTableClient.create())
       val snapshot = table.getLatestSnapshot
 
       // Contains both the data schema and partition schema
@@ -52,7 +52,7 @@ class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
             convertJSONToRow(serializedFileInfo, fileColumnarBatch.getSchema),
             convertJSONToRow(serializedScanState, scanState.getSchema),
             Optional.of(testScanFileContext),
-            DefaultTableHelper.create(),
+            DefaultTableClient.create(),
             readSchema
           )
 
@@ -70,7 +70,7 @@ class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
 
   test("end-to-end usage: reading a table with checkpoint") {
     withGoldenTable("basic-with-checkpoint") { path =>
-      val table = Table.forPath(path, DefaultTableHelper.create())
+      val table = Table.forPath(path, DefaultTableClient.create())
       val snapshot = table.getLatestSnapshot
 
       // Contains both the data schema and partition schema
@@ -101,7 +101,7 @@ class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
             convertJSONToRow(serializedFileInfo, fileColumnarBatch.getSchema),
             convertJSONToRow(serializedScanState, scanState.getSchema),
             Optional.of(testScanFileContext),
-            DefaultTableHelper.create(),
+            DefaultTableClient.create(),
             readSchema
           )
 

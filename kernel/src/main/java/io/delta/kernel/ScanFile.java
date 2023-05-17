@@ -6,8 +6,6 @@ import io.delta.kernel.data.ColumnarBatch;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.expressions.Expression;
 import io.delta.kernel.fs.FileStatus;
-import io.delta.kernel.helpers.ScanFileContext;
-import io.delta.kernel.helpers.TableHelper;
 import io.delta.kernel.utils.CloseableIterator;
 import io.delta.kernel.utils.Tuple2;
 
@@ -39,8 +37,7 @@ public class ScanFile
     }
 
     /**
-     * Get the data from a scan file with the given connector's
-     * {@link ScanFileContext} and {@link TableHelper} implementations.
+     * Get the data from a given scan files with using the connector provider {@link TableClient}.
      *
      * @param tableClient Connector provided {@link TableClient} implementation.
      * @param scanState Scan state returned by {@link Scan#getScanState()}

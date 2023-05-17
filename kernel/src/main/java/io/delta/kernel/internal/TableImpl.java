@@ -8,7 +8,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import io.delta.kernel.Snapshot;
 import io.delta.kernel.Table;
 import io.delta.kernel.TableVersionNotFoundException;
-import io.delta.kernel.helpers.TableHelper;
+import io.delta.kernel.client.TableClient;
 import io.delta.kernel.internal.checkpoint.Checkpointer;
 import io.delta.kernel.fs.Path;
 import io.delta.kernel.internal.snapshot.SnapshotManager;
@@ -17,7 +17,7 @@ import io.delta.kernel.internal.util.Logging;
 public class TableImpl implements Table, Logging
 {
 
-    public static Table forPath(String path, TableHelper helper) {
+    public static Table forPath(String path, TableClient client) {
         // TODO: take in a configuration and use conf.get("fs.defaultFS")
         final URI defaultUri = URI.create("file:///");
         final Path workingDir = new Path(Paths.get(".").toAbsolutePath().toUri());
@@ -25,12 +25,12 @@ public class TableImpl implements Table, Logging
         final Path dataPath = new Path(path).makeQualified(defaultUri, workingDir);
         final Path logPath = new Path(dataPath, "_delta_log");
 
-        return new TableImpl(logPath, dataPath, helper);
+        return new TableImpl(logPath, dataPath, client);
     }
 
     public final Path logPath;
     public final Path dataPath;
-    public final TableHelper tableHelper;
+    public final TableClient tableClient;
     public final Checkpointer checkpointer;
     public final SnapshotManager snapshotManager;
 
@@ -39,14 +39,14 @@ public class TableImpl implements Table, Logging
     public TableImpl(
             Path logPath,
             Path dataPath,
-            TableHelper tableHelper) {
+            TableClient tableClient) {
         logDebug(
             String.format("TableImpl created with logPath %s, dataPath %s", logPath, dataPath)
         );
 
         this.logPath = logPath;
         this.dataPath = dataPath;
-        this.tableHelper = tableHelper;
+        this.tableClient = tableClient;
 
         this.lock = new ReentrantLock();
         this.checkpointer = new Checkpointer(this);

@@ -2,7 +2,7 @@ package io.delta.kernel.expressions;
 
 import java.util.Comparator;
 
-import io.delta.core.types.*;
+import io.delta.kernel.types.*;
 import io.delta.kernel.types.BooleanType;
 import io.delta.kernel.types.DataType;
 import io.delta.kernel.types.IntegerType;

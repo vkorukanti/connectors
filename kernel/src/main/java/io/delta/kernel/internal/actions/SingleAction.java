@@ -1,7 +1,6 @@
 package io.delta.kernel.internal.actions;
 
 import io.delta.kernel.data.Row;
-import io.delta.kernel.helpers.TableHelper;
 import io.delta.kernel.types.StructType;
 
 public class SingleAction {

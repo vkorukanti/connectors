@@ -41,7 +41,7 @@ public class SnapshotImpl implements Snapshot
 
         this.logReplay = new LogReplay(
                 logPath,
-                tableImpl.tableHelper,
+                tableImpl.tableClient,
                 logSegment);
         this.protocolAndMetadata = logReplay.lazyLoadProtocolAndMetadata();
     }
@@ -68,7 +68,7 @@ public class SnapshotImpl implements Snapshot
             getSchema(),
             getMetadata().getPartitionSchema(),
             logReplay.getAddFiles(),
-            tableImpl.tableHelper
+            tableImpl.tableClient
         );
     }
 

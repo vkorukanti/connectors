@@ -81,7 +81,7 @@ public class SnapshotManager implements Logging
     private CloseableIterator<FileStatus> listFrom(long startVersion) throws FileNotFoundException {
         logDebug(String.format("startVersion: %s", startVersion));
         return tableImpl
-            .tableHelper
+            .tableClient
             .listFiles(
                     new FileStatus(
                             FileNames.listingPrefix(tableImpl.logPath, startVersion),

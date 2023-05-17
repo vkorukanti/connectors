@@ -79,7 +79,7 @@ public class Checkpointer implements Logging
     private Optional<CheckpointMetaData> loadMetadataFromFile(int tries) {
         try {
             final CloseableIterator<ColumnarBatch> jsonIter = tableImpl
-                .tableHelper
+                .tableClient
                 .readJsonFile(
                         new FileStatus(LAST_CHECKPOINT.toString(), 0, 0),
                         CheckpointMetaData.READ_SCHEMA);

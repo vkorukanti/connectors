@@ -18,11 +18,12 @@ public interface Scan {
     CloseableIterator<ColumnarBatch> getScanFiles();
 
     /**
-     * Get the remaining filter the Delta Kernel can not guarantee the data returned by it
-     * satisfy the filter. This filter is used by Delta Kernel to do data skipping whenever
+     * Get the remaining predicate the Delta Kernel can not guarantee the data returned by it
+     * satisfies the predicate. This filter is used by Delta Kernel to do data skipping whenever
      * possible.
+     * @return Remaining predicate as {@link Expression}.
      */
-    Expression getRemainingFilter();
+    Expression getRemainingPredicate();
 
     /**
      * Get the scan state associate with the current scan.

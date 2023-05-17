@@ -5,12 +5,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import io.delta.kernel.ColumnMappingMode;
+import io.delta.kernel.client.TableClient;
 import io.delta.kernel.data.ColumnarBatch;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.fs.FileStatus;
 import io.delta.kernel.fs.Path;
-import io.delta.kernel.helpers.TableHelper;
 import io.delta.kernel.internal.actions.Action;
 import io.delta.kernel.internal.actions.SingleAction;
 import io.delta.kernel.internal.lang.CloseableIterable;
@@ -20,11 +19,11 @@ import io.delta.kernel.utils.CloseableIterator;
 public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<Action, Boolean>>
 {
 
-    private final TableHelper tableHelper;
+    private final TableClient tableHelper;
     private final List<FileStatus> reverseSortedFiles;
 
     public ReverseFilesToActionsIterable(
-            TableHelper tableHelper,
+            TableClient tableHelper,
             Stream<FileStatus> filesUnsorted) {
         this.tableHelper = tableHelper;
         this.reverseSortedFiles = filesUnsorted
