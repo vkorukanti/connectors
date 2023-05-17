@@ -1,7 +1,0 @@
-io.delta.core
-io.delta.core.data
-io.delta.core.expressions
-io.delta.core.fs
-io.delta.core.helpers
-io.delta.core.types
-io.delta.core.utils
