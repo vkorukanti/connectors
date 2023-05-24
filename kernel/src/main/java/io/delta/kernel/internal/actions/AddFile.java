@@ -65,7 +65,7 @@ public class AddFile extends FileAction {
     }
 
     public Optional<String> getDeletionVectorUniqueId() {
-        return Optional.of(deletionVector);
+        return Optional.ofNullable(deletionVector);
     }
 
     @Override

@@ -9,16 +9,18 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import io.delta.kernel.Scan;
+import io.delta.kernel.client.TableClient;
 import io.delta.kernel.data.ColumnarBatch;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.expressions.Expression;
+import io.delta.kernel.expressions.Literal;
 import io.delta.kernel.fs.Path;
 import io.delta.kernel.internal.actions.AddFile;
 import io.delta.kernel.internal.actions.Metadata;
 import io.delta.kernel.internal.actions.Protocol;
 import io.delta.kernel.internal.data.AddFileColumnarBatch;
-import io.delta.kernel.internal.data.ScanStateColumnarBatch;
 import io.delta.kernel.internal.data.PartitionRow;
+import io.delta.kernel.internal.data.ScanStateRow;
 import io.delta.kernel.internal.lang.Lazy;
 import io.delta.kernel.utils.Tuple2;
 import io.delta.kernel.internal.util.PartitionUtils;
@@ -40,7 +42,7 @@ public class ScanImpl implements Scan
     private final StructType snapshotPartitionSchema;
 
     private final CloseableIterator<AddFile> filesIter;
-    private final TableHelper tableHelper;
+    private final TableClient tableClient;
 
     /** Mapping from partitionColumnName to its ordinal in the `snapshotSchema`. */
     private final Map<String, Integer> partitionColumnOrdinals;
@@ -58,7 +60,7 @@ public class ScanImpl implements Scan
             CloseableIterator<AddFile> filesIter,
             Optional<Expression> filter,
             Path dataPath,
-            TableHelper tableHelper) {
+            TableClient tableClient) {
         this.snapshotSchema = snapshotSchema;
         this.readSchema = readSchema;
         this.snapshotPartitionSchema = snapshotPartitionSchema;
@@ -66,7 +68,7 @@ public class ScanImpl implements Scan
         this.filesIter = filesIter;
         this.partitionColumnOrdinals = PartitionUtils.getPartitionOrdinals(snapshotSchema, snapshotPartitionSchema);
         this.dataPath = dataPath;
-        this.tableHelper = tableHelper;
+        this.tableClient = tableClient;
 
         if (filter.isPresent()) {
             final List<String> partitionColumns = snapshotPartitionSchema.fieldNames();
@@ -95,7 +97,8 @@ public class ScanImpl implements Scan
      *
      * @return data in {@link ColumnarBatch} batch format. Each row correspond to one survived file.
      */
-    public CloseableIterator<ColumnarBatch> getScanFiles() {
+    @Override
+    public CloseableIterator<ColumnarBatch> getScanFiles(TableClient tableClient) {
         return new CloseableIterator<ColumnarBatch>() {
             private Optional<AddFile> nextValid = Optional.empty();
             private boolean closed;
@@ -147,7 +150,10 @@ public class ScanImpl implements Scan
                 }
 
                 // Perform Partition Pruning
-                final PartitionRow row = new PartitionRow(partitionColumnOrdinals, addFile.getPartitionValues());
+                final PartitionRow row = new PartitionRow(
+                        snapshotPartitionSchema,
+                        partitionColumnOrdinals,
+                        addFile.getPartitionValues());
                 if ((boolean) metadataFilterConjunction.get().eval(row)) {
                     return Optional.of(addFile);
                 }
@@ -157,14 +163,19 @@ public class ScanImpl implements Scan
         };
     }
 
-    /**
-     * Get the scan state associate with the current scan. This state is common to all survived
-     * files.
-     */
-    public Row getScanState() {
-        return new ScanStateColumnarBatch(
-            protocolAndMetadata.get()._2,
-            protocolAndMetadata.get()._1,
-            dataPath.toUri().toString()).getRows().next();
+    @Override
+    public Row getScanState(TableClient tableClient)
+    {
+        return new ScanStateRow(
+                protocolAndMetadata.get()._2,
+                protocolAndMetadata.get()._1,
+                readSchema,
+                dataPath.toUri().toString());
+    }
+
+    @Override
+    public Expression getRemainingFilter()
+    {
+        return dataFilterConjunction.orElse(Literal.TRUE);
     }
 }

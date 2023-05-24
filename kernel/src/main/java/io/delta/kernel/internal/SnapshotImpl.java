@@ -2,6 +2,7 @@ package io.delta.kernel.internal;
 
 import io.delta.kernel.ScanBuilder;
 import io.delta.kernel.Snapshot;
+import io.delta.kernel.client.TableClient;
 import io.delta.kernel.fs.Path;
 import io.delta.kernel.internal.actions.AddFile;
 import io.delta.kernel.internal.actions.Metadata;
@@ -51,21 +52,24 @@ public class SnapshotImpl implements Snapshot
     ////////////////////////////////////////
 
     @Override
-    public long getVersion() {
+    public long getVersion(TableClient tableClient)
+    {
         return version;
     }
 
     @Override
-    public StructType getSchema() {
+    public StructType getSchema(TableClient tableClient)
+    {
         return getMetadata().getSchema();
     }
 
     @Override
-    public ScanBuilder getScanBuilder() {
+    public ScanBuilder getScanBuilder(TableClient tableClient)
+    {
         return new ScanBuilderImpl(
             dataPath,
             protocolAndMetadata,
-            getSchema(),
+            getSchema(tableClient),
             getMetadata().getPartitionSchema(),
             logReplay.getAddFiles(),
             tableImpl.tableClient

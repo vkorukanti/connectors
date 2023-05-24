@@ -11,12 +11,13 @@ import io.delta.kernel.types.StructType;
  */
 public interface ExpressionHandler
 {
+    // TODO: specify 1:1 input and outout
     /**
      * Create an {@link ExpressionEvaluator} that can evaluate the given <i>expression</i> on
-     * {@link io.delta.kernel.data.ColumnarBatch} of data with given <i>schema</i>.
-     * @param schema Schema of the input data.
+     * {@link io.delta.kernel.data.ColumnarBatch} of data with given <i>batchSchema</i>.
+     * @param batchSchema Schema of the input data.
      * @param expression Expression to evaluate.
-     * @return An {@link ExpressionEvaluator} instance bound to the given expression and schema.
+     * @return An {@link ExpressionEvaluator} instance bound to the given expression and batchSchema.
      */
-    ExpressionEvaluator getEvaluator(StructType schema, Expression expression);
+    ExpressionEvaluator getEvaluator(StructType batchSchema, Expression expression);
 }

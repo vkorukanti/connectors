@@ -1,5 +1,6 @@
 package io.delta.kernel.internal.actions;
 
+import io.delta.kernel.client.TableClient;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.types.StructType;
 
@@ -9,7 +10,7 @@ public class SingleAction {
     // Static Fields / Methods
     ////////////////////////////////////////////////////////////////////////////////
 
-    public static SingleAction fromRow(Row row, TableHelper tableHelper) {
+    public static SingleAction fromRow(Row row, TableClient tableClient) {
         final SetTransaction txn = SetTransaction.fromRow(row.getRecord(0));
         if (txn != null) {
             return new SingleAction(txn, null, null, null, null, null, null);
@@ -25,7 +26,7 @@ public class SingleAction {
             return new SingleAction(null, null, remove, null, null, null, null);
         }
 
-        final Metadata metadata = Metadata.fromRow(row.getRecord(3), tableHelper);
+        final Metadata metadata = Metadata.fromRow(row.getRecord(3), tableClient);
         if (metadata != null) {
             return new SingleAction(null, null, null, metadata, null, null, null);
         }
@@ -35,12 +36,12 @@ public class SingleAction {
             return new SingleAction(null, null, null, null, protocol, null, null);
         }
 
-        final AddCDCFile cdc = AddCDCFile.fromRow(row.getRecord(5));
-        if (cdc != null) {
-            return new SingleAction(null, null, null, null, null, cdc, null);
-        }
+//        final AddCDCFile cdc = AddCDCFile.fromRow(row.getRecord(5));
+//        if (cdc != null) {
+//            return new SingleAction(null, null, null, null, null, cdc, null);
+//        }
 
-        final CommitInfo commitInfo = CommitInfo.fromRow(row.getRecord(6));
+        final CommitInfo commitInfo = CommitInfo.fromRow(row.getRecord(5));
         if (commitInfo != null) {
             return new SingleAction(null, null, null, null, null, null, commitInfo);
         }
@@ -54,7 +55,8 @@ public class SingleAction {
         .add("remove", RemoveFile.READ_SCHEMA)
         .add("metaData", Metadata.READ_SCHEMA)
         .add("protocol", Protocol.READ_SCHEMA)
-        .add("cdc", AddCDCFile.READ_SCHEMA)
+        // TODO: current Parquet reader doesn't handle missing columns in the files
+        // .add("cdc", AddCDCFile.READ_SCHEMA)
         .add("commitInfo", CommitInfo.READ_SCHEMA);
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -66,7 +68,7 @@ public class SingleAction {
     private final RemoveFile remove;
     private final Metadata metadata;
     private final Protocol protocol;
-    private final AddCDCFile cdc;
+    // private final AddCDCFile cdc;
     private final CommitInfo commitInfo;
 
     private SingleAction(
@@ -82,7 +84,7 @@ public class SingleAction {
         this.remove = remove;
         this.metadata = metadata;
         this.protocol = protocol;
-        this.cdc = cdc;
+        // this.cdc = cdc;
         this.commitInfo = commitInfo;
     }
 
@@ -92,7 +94,7 @@ public class SingleAction {
         if (remove != null) return remove;
         if (metadata != null) return metadata;
         if (protocol != null) return protocol;
-        if (cdc != null) return cdc;
+        // if (cdc != null) return cdc;
         if (commitInfo != null) return commitInfo;
 
         throw new IllegalStateException("SingleAction row contained no non-null actions");

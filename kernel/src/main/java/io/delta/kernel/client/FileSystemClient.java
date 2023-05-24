@@ -16,25 +16,14 @@ import java.io.IOException;
 public interface FileSystemClient
 {
     /**
-     * Given the path return an interator of files in given directory.
+     * List the paths in the same directory that are lexicographically greater or equal to
+     * (UTF-8 sorting) the given `path`. The result should also be sorted by the file name.
      *
-     * @param directoryPath Fully qualified path to a directory.
+     * @param filePath Fully qualified path to a file
      * @return Closeable iterator of files. It is the responsibility of the caller to close the
      *         iterator.
-     * @throws FileNotFoundException if the given directory path is not found
+     * @throws FileNotFoundException if the file at the given path is not found
      */
-    CloseableIterator<FileStatus> listFiles(String directoryPath)
+    CloseableIterator<FileStatus> listFrom(String filePath)
             throws FileNotFoundException;
-
-
-    /**
-     * Open the given file for reading and return an input stream
-     *
-     * @param filePath Fully qualified file path.
-     * @return A {@link DataInputStream}. It is the responsibility of the caller to close the stream
-     *         once done with it.
-     * @throws IOException If an error occurs in opening the given file.
-     */
-    DataInputStream readFile(FileStatus filePath)
-            throws IOException;
 }

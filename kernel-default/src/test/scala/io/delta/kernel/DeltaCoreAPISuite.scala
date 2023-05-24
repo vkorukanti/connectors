@@ -7,39 +7,36 @@ import scala.collection.mutable.ArrayBuffer
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
-import io.delta.core.expressions.Literal
-import io.delta.core.helpers.DefaultTableHelper
-import io.delta.core.types._
+import io.delta.kernel.client.{DefaultTableClient, TableClient}
 import io.delta.kernel.data.{ColumnarBatch, ColumnVector, JsonRow, Row}
 import io.delta.kernel.expressions.{Expression, Literal}
-import io.delta.kernel.{Scan, ScanFile, Snapshot, Table}
-import io.delta.kernel.client.{DefaultScanFileContext, DefaultTableClient}
 import io.delta.kernel.types.{ArrayType, BooleanType, IntegerType, LongType, MapType, StringType, StructType}
 import io.delta.kernel.util.GoldenTableUtils
+import io.delta.kernel.utils.Utils
+import org.apache.hadoop.conf.Configuration
 import org.scalatest.funsuite.AnyFunSuite
 
 class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
   test("end-to-end usage: reading a table") {
     withGoldenTable("delta-table") { path =>
-      val table = Table.forPath(path, DefaultTableClient.create())
-      val snapshot = table.getLatestSnapshot
+      val tableClient = DefaultTableClient.create(new Configuration())
+      val table = Table.forPath(tableClient, path)
+      val snapshot = table.getLatestSnapshot(tableClient)
 
       // Contains both the data schema and partition schema
-      val tableSchema = snapshot.getSchema
+      val tableSchema = snapshot.getSchema(tableClient)
 
       // Go through the tableSchema and select the columns interested in reading
       val readSchema = new StructType().add("id", LongType.INSTANCE)
       val filter = Literal.TRUE
 
-      val scanObject = scan(snapshot, readSchema, filter)
+      val scanObject = scan(tableClient, snapshot, readSchema, filter)
 
-      val fileIter = scanObject.getScanFiles
-      val scanState = scanObject.getScanState;
+      val fileIter = scanObject.getScanFiles(tableClient)
+      val scanState = scanObject.getScanState(tableClient);
 
       // There should be just one element in the scan state
       val serializedScanState = convertColumnarBatchRowToJSON(scanState)
-
-      val testScanFileContext = new DefaultScanFileContext
 
       val actualValueColumnValues = ArrayBuffer[Long]()
       while(fileIter.hasNext) {
@@ -49,16 +46,17 @@ class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
 
           // START OF THE CODE THAT WILL BE EXECUTED ON THE EXECUTOR
           val dataBatches = ScanFile.readData(
-            convertJSONToRow(serializedFileInfo, fileColumnarBatch.getSchema),
-            convertJSONToRow(serializedScanState, scanState.getSchema),
-            Optional.of(testScanFileContext),
-            DefaultTableClient.create(),
-            readSchema
+            tableClient,
+            scanState,
+            // convertJSONToRow(serializedScanState, scanState.getSchema),
+            Utils.singletonCloseableIterator(
+              convertJSONToRow(serializedFileInfo, fileColumnarBatch.getSchema)),
+            Optional.empty()
           )
 
           while(dataBatches.hasNext) {
             val batch = dataBatches.next()
-            val valueColVector = batch.getColumnVector(0)
+            val valueColVector = batch._1.getColumnVector(0)
             actualValueColumnValues.append(vectorToLongs(valueColVector): _*)
           }
           // END OF THE CODE THAT WILL BE EXECUTED ON THE EXECUTOR
@@ -70,25 +68,24 @@ class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
 
   test("end-to-end usage: reading a table with checkpoint") {
     withGoldenTable("basic-with-checkpoint") { path =>
-      val table = Table.forPath(path, DefaultTableClient.create())
-      val snapshot = table.getLatestSnapshot
+      val tableClient = DefaultTableClient.create(new Configuration())
+      val table = Table.forPath(tableClient, path)
+      val snapshot = table.getLatestSnapshot(tableClient)
 
       // Contains both the data schema and partition schema
-      val tableSchema = snapshot.getSchema
+      val tableSchema = snapshot.getSchema(tableClient)
 
       // Go through the tableSchema and select the columns interested in reading
       val readSchema = new StructType().add("id", LongType.INSTANCE)
       val filter = Literal.TRUE
 
-      val scanObject = scan(snapshot, readSchema, filter)
+      val scanObject = scan(tableClient, snapshot, readSchema, filter)
 
-      val fileIter = scanObject.getScanFiles
-      val scanState = scanObject.getScanState;
+      val fileIter = scanObject.getScanFiles(tableClient)
+      val scanState = scanObject.getScanState(tableClient);
 
       // There should be just one element in the scan state
       val serializedScanState = convertColumnarBatchRowToJSON(scanState)
-
-      val testScanFileContext = new DefaultScanFileContext
 
       val actualValueColumnValues = ArrayBuffer[Long]()
       while(fileIter.hasNext) {
@@ -98,16 +95,17 @@ class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
 
           // START OF THE CODE THAT WILL BE EXECUTED ON THE EXECUTOR
           val dataBatches = ScanFile.readData(
-            convertJSONToRow(serializedFileInfo, fileColumnarBatch.getSchema),
-            convertJSONToRow(serializedScanState, scanState.getSchema),
-            Optional.of(testScanFileContext),
-            DefaultTableClient.create(),
-            readSchema
+            tableClient,
+            scanState,
+            // convertJSONToRow(serializedScanState, scanState.getSchema),
+            Utils.singletonCloseableIterator(
+              convertJSONToRow(serializedFileInfo, fileColumnarBatch.getSchema)),
+            Optional.empty()
           )
 
           while(dataBatches.hasNext) {
             val batch = dataBatches.next()
-            val valueColVector = batch.getColumnVector(0)
+            val valueColVector = batch._1.getColumnVector(0)
             actualValueColumnValues.append(vectorToLongs(valueColVector): _*)
           }
           // END OF THE CODE THAT WILL BE EXECUTED ON THE EXECUTOR
@@ -196,11 +194,15 @@ class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
     }
   }
 
-  private def scan(snapshot: Snapshot, readSchema: StructType, filter: Expression = null): Scan = {
-    var builder = snapshot.getScanBuilder()
+  private def scan(
+    tableClient: TableClient,
+    snapshot: Snapshot,
+    readSchema: StructType,
+    filter: Expression = null): Scan = {
+    var builder =
+      snapshot.getScanBuilder(tableClient).withReadSchema(tableClient, readSchema)
     if (filter != null) {
-      val builderFilterTuple = builder.applyFilter(filter)
-      builder = builderFilterTuple._1
+      builder = builder.withFilter(tableClient, filter)
     }
     builder.build()
   }

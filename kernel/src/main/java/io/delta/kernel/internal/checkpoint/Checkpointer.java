@@ -79,17 +79,18 @@ public class Checkpointer implements Logging
     private Optional<CheckpointMetaData> loadMetadataFromFile(int tries) {
         try {
             final CloseableIterator<ColumnarBatch> jsonIter = tableImpl
-                .tableClient
+                .tableClient.getJsonHandler()
                 .readJsonFile(
-                        new FileStatus(LAST_CHECKPOINT.toString(), 0, 0),
-                        CheckpointMetaData.READ_SCHEMA);
+                        FileStatus.of(LAST_CHECKPOINT.toString(), 0, 0),
+                        CheckpointMetaData.READ_SCHEMA
+                );
 
             if (!jsonIter.hasNext()) {
                 return Optional.empty();
             }
 
             return Optional.of(CheckpointMetaData.fromRow(jsonIter.next().getRows().next()));
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             return Optional.empty();
         }
     }

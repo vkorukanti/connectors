@@ -9,11 +9,17 @@ public class FileStatus {
 
     private final String path;
     private final long size;
+    private final long modificationTime;
     private final boolean hasDeletionVector;
 
-    private FileStatus(String path, long size, boolean hasDeletionVector) {
+    private FileStatus(
+            String path,
+            long size,
+            long modificationTime,
+            boolean hasDeletionVector) {
         this.path = Objects.requireNonNull(path, "path is null");
         this.size = size; // TODO: validation
+        this.modificationTime = modificationTime; // TODO: validation
         this.hasDeletionVector = hasDeletionVector;
     }
 
@@ -35,6 +41,15 @@ public class FileStatus {
     }
 
     /**
+     * Get the modification time of the file in epoch millis.
+     * @return Modification time in epoch millis
+     */
+    public long getModificationTime()
+    {
+        return modificationTime;
+    }
+
+    /**
      * Whether this file has any associated deletion vector?
      * @return True if the file has an associated deletion vector. Otherwise false.
      */
@@ -47,10 +62,11 @@ public class FileStatus {
      * Create a {@link FileStatus} representing the given path and file size.
      * @param path Fully qualified file path.
      * @param size File size in bytes
+     * @param modificationTime Modification time of the file in epoch millis
      * @return
      */
-    public static FileStatus of(String path, long size) {
-        return new FileStatus(path, size, false);
+    public static FileStatus of(String path, long size, long modificationTime) {
+        return new FileStatus(path, size, modificationTime, false);
     }
 
     /**
@@ -58,10 +74,15 @@ public class FileStatus {
      *
      * @param path Fully qualified file path.
      * @param size File size in bytes
+     * @param modificationTime Modification time of the file in epoch millis
      * @param hasDeletionVector Whether the file has an associated deletion vector file.
      * @return
      */
-    public static FileStatus of(String path, long size, boolean hasDeletionVector) {
-        return new FileStatus(path, size, hasDeletionVector);
+    public static FileStatus of(
+            String path,
+            long size,
+            long modificationTime,
+            boolean hasDeletionVector) {
+        return new FileStatus(path, size, modificationTime, hasDeletionVector);
     }
 }

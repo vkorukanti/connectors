@@ -5,6 +5,7 @@ import java.util.Optional;
 import io.delta.kernel.InvalidExpressionException;
 import io.delta.kernel.Scan;
 import io.delta.kernel.ScanBuilder;
+import io.delta.kernel.client.TableClient;
 import io.delta.kernel.expressions.Expression;
 import io.delta.kernel.fs.Path;
 import io.delta.kernel.internal.actions.AddFile;
@@ -22,7 +23,7 @@ public class ScanBuilderImpl implements ScanBuilder
     private final StructType snapshotPartitionSchema;
     private final CloseableIterator<AddFile> filesIter;
     private final Lazy<Tuple2<Protocol, Metadata>> protocolAndMetadata;
-    private final TableHelper tableHelper;
+    private final TableClient tableClient;
     private final Path dataPath;
 
     private StructType readSchema;
@@ -34,25 +35,32 @@ public class ScanBuilderImpl implements ScanBuilder
             StructType snapshotSchema,
             StructType snapshotPartitionSchema,
             CloseableIterator<AddFile> filesIter,
-            TableHelper tableHelper) {
+            TableClient tableClient) {
         this.dataPath = dataPath;
         this.snapshotSchema = snapshotSchema;
         this.snapshotPartitionSchema = snapshotPartitionSchema;
         this.filesIter = filesIter;
         this.protocolAndMetadata = protocolAndMetadata;
-        this.tableHelper = tableHelper;
+        this.tableClient = tableClient;
 
         this.readSchema = snapshotSchema;
         this.filter = Optional.empty();
     }
 
     @Override
-    public Tuple2<ScanBuilder, Expression> applyFilter(Expression filter)
+    public ScanBuilder withFilter(TableClient tableClient, Expression filter)
             throws InvalidExpressionException
     {
-        // TODO: for now return the complete expression as the remaining expression.
-        // Fix it later to return only non-partition column filter
-        return new Tuple2<>(this, filter);
+        this.filter = Optional.of(filter);
+        return this;
+    }
+
+    @Override
+    public ScanBuilder withReadSchema(TableClient tableClient, StructType readSchema)
+    {
+        // TODO: validate the readSchema is a subset of the table schema
+        this.readSchema = readSchema;
+        return this;
     }
 
     @Override
@@ -65,6 +73,6 @@ public class ScanBuilderImpl implements ScanBuilder
                 filesIter,
                 filter,
                 dataPath,
-                tableHelper);
+                tableClient);
     }
 }

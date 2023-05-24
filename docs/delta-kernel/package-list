@@ -1,0 +1,7 @@
+io.delta.kernel
+io.delta.kernel.client
+io.delta.kernel.data
+io.delta.kernel.expressions
+io.delta.kernel.fs
+io.delta.kernel.types
+io.delta.kernel.utils

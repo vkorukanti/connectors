@@ -10,16 +10,16 @@ import io.delta.kernel.types.StructType;
 public interface ScanBuilder {
 
     /**
-     * Apply the given predicate expression to prune any files
-     * that do not contain data satisfying the given predicate.
+     * Apply the given filter expression to prune any files
+     * that do not contain data satisfying the given filter.
      *
      * @param tableClient {@link TableClient} instance to use in Delta Kernel.
-     * @param predicate an {@link Expression} which evaluates to boolean.
-     * @return A {@link ScanBuilder} with predicate applied.
+     * @param filter an {@link Expression} which evaluates to boolean.
+     * @return A {@link ScanBuilder} with filter applied.
      *
      * @throws InvalidExpressionException if the filter is not valid.
      */
-    ScanBuilder withPredicate(TableClient tableClient, Expression predicate)
+    ScanBuilder withFilter(TableClient tableClient, Expression filter)
             throws InvalidExpressionException;
 
     /**
@@ -29,7 +29,7 @@ public interface ScanBuilder {
      * @param readSchema Subset of columns to read from the Delta table.
      * @return A {@link ScanBuilder} with projection pruning.
      */
-    ScanBuilder withProject(TableClient tableClient, StructType readSchema);
+    ScanBuilder withReadSchema(TableClient tableClient, StructType readSchema);
 
     /**
      * @return Build the {@link Scan instance}
