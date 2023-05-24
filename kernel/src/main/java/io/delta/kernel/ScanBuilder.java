@@ -29,7 +29,7 @@ public interface ScanBuilder {
      * @param readSchema Subset of columns to read from the Delta table.
      * @return A {@link ScanBuilder} with projection pruning.
      */
-    ScanBuilder withProject(TableClient tableClient, StructType readSchema);
+    ScanBuilder withProjects(TableClient tableClient, StructType readSchema);
 
     /**
      * @return Build the {@link Scan instance}

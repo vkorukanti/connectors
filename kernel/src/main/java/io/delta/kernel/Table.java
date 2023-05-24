@@ -14,10 +14,10 @@ public interface Table {
      * @return an instance of {@link Table} representing the Delta table at given path
      * @throws TableNotFoundException when there is no Delta table at the given path.
      */
-    static Table forPath(String path, TableClient tableClient)
+    static Table forPath(TableClient tableClient, String path)
         throws TableNotFoundException
     {
-        return TableImpl.forPath(path, tableClient);
+        return TableImpl.forPath(tableClient, path);
     }
 
     /**

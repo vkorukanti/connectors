@@ -14,7 +14,7 @@ public interface Scan {
      * Get an iterator of data files to scan.
      *
      * @param tableClient {@link TableClient} instance to use in Delta Kernel.
-     * @return data in {@link ColumnarBatch} batch format.
+     * @return data in {@link ColumnarBatch} format.
      *         Each row correspond to one scan file.
      */
     CloseableIterator<ColumnarBatch> getScanFiles(TableClient tableClient);

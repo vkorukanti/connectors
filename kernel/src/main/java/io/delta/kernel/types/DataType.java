@@ -8,6 +8,7 @@ public abstract class DataType {
         if (typeName.equals(IntegerType.INSTANCE.typeName())) return IntegerType.INSTANCE;
         if (typeName.equals(LongType.INSTANCE.typeName())) return LongType.INSTANCE;
         if (typeName.equals(StringType.INSTANCE.typeName())) return StringType.INSTANCE;
+        if (typeName.equals(BooleanType.INSTANCE.typeName())) return BooleanType.INSTANCE;
 
         throw new IllegalArgumentException(
             String.format("Can't create primitive for type type %s", typeName)

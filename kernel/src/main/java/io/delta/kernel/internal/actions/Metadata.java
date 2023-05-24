@@ -6,7 +6,6 @@ import java.util.stream.Collectors;
 
 import io.delta.kernel.client.TableClient;
 import io.delta.kernel.data.Row;
-import io.delta.kernel.types.*;
 import io.delta.kernel.types.ArrayType;
 import io.delta.kernel.types.LongType;
 import io.delta.kernel.types.MapType;
@@ -19,7 +18,7 @@ public class Metadata implements Action {
     // Static Fields / Methods
     ////////////////////////////////////////////////////////////////////////////////
 
-    public static Metadata fromRow(Row row, TableClient tableHelper) {
+    public static Metadata fromRow(Row row, TableClient tableClient) {
         if (row == null) return null;
         final String id = row.getString(0);
         final String name = row.getString(1);
@@ -28,7 +27,7 @@ public class Metadata implements Action {
         final Map<String, String> configuration = row.getMap(6);
         final String schemaJson = row.getString(4);
         final List<String> partitionColumns = row.getList(5);
-        Row schemaRow = tableHelper.parseJson(schemaJson, StructType.READ_SCHEMA);
+        Row schemaRow = tableClient.getJsonHandler().parseJson(schemaJson, StructType.READ_SCHEMA);
         StructType schema = StructType.fromRow(schemaRow);
 
         return new Metadata(schemaJson, schema, partitionColumns, configuration);

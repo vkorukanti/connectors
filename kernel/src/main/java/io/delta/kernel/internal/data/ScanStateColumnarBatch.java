@@ -29,6 +29,7 @@ public class ScanStateColumnarBatch
             .add("partitionColumns", new ArrayType(StringType.INSTANCE, false))
             .add("minReaderVersion", IntegerType.INSTANCE)
             .add("minWriterVersion", IntegerType.INSTANCE)
+            .add("readSchemaString", StringType.INSTANCE)
             .add("tablePath", StringType.INSTANCE);
 
     static {
@@ -37,19 +38,26 @@ public class ScanStateColumnarBatch
         ordinalToAccessor.put(2, (a) -> a.getPartitionColumns());
         ordinalToAccessor.put(3, (a) -> a.getMinReaderVersion());
         ordinalToAccessor.put(4, (a) -> a.getMinWriterVersion());
-        ordinalToAccessor.put(5, (a) -> a.getTablePath());
+        ordinalToAccessor.put(5, (a) -> a.getReadSchemaString());
+        ordinalToAccessor.put(6, (a) -> a.getTablePath());
 
         ordinalToColName.put(0, "configuration");
         ordinalToColName.put(1, "schemaString");
         ordinalToColName.put(2, "partitionColumns");
         ordinalToColName.put(3, "minReaderVersion");
         ordinalToColName.put(4, "minWriterVersion");
-        ordinalToColName.put(5, "tablePath");
+        ordinalToColName.put(5, "readSchemaString");
+        ordinalToColName.put(7, "tablePath");
     }
 
-    public ScanStateColumnarBatch(Metadata metadata, Protocol protocol, String tablePath)
+    public ScanStateColumnarBatch(
+            Metadata metadata,
+            Protocol protocol,
+            String readSchemaString,
+            String tablePath)
     {
-        super(Collections.singletonList(new ScanState(metadata, protocol, tablePath)),
+        super(Collections.singletonList(
+                new ScanState(metadata, protocol, readSchemaString, tablePath)),
                 schema,
                 ordinalToAccessor,
                 ordinalToColName);
@@ -61,15 +69,21 @@ public class ScanStateColumnarBatch
         private final List<String> partitionColumns;
         private final int minReaderVersion;
         private final int minWriterVersion;
+        private final String readSchemaString;
         private String tablePath;
 
-        public ScanState(Metadata metadata, Protocol protocol, String tablePath)
+        public ScanState(
+                Metadata metadata,
+                Protocol protocol,
+                String readSchemaString,
+                String tablePath)
         {
             this.configuration = metadata.getConfiguration();
             this.schemaString = metadata.getSchemaString();
             this.partitionColumns = metadata.getPartitionColumns();
             this.minReaderVersion = protocol.getMinReaderVersion();
             this.minWriterVersion = protocol.getMinWriterVersion();
+            this.readSchemaString = readSchemaString;
             this.tablePath = tablePath;
         }
 
@@ -96,6 +110,11 @@ public class ScanStateColumnarBatch
         public int getMinWriterVersion()
         {
             return minWriterVersion;
+        }
+
+        public String getReadSchemaString()
+        {
+            return readSchemaString;
         }
 
         public String getTablePath()

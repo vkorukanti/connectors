@@ -5,29 +5,35 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import io.delta.kernel.client.FileReadContext;
+import io.delta.kernel.client.ParquetHandler;
+import io.delta.kernel.client.ParquetHandler.ParquetDataReadResult;
 import io.delta.kernel.client.TableClient;
 import io.delta.kernel.data.ColumnarBatch;
 import io.delta.kernel.data.Row;
+import io.delta.kernel.expressions.Literal;
 import io.delta.kernel.fs.FileStatus;
 import io.delta.kernel.fs.Path;
 import io.delta.kernel.internal.actions.Action;
 import io.delta.kernel.internal.actions.SingleAction;
 import io.delta.kernel.internal.lang.CloseableIterable;
+import io.delta.kernel.internal.util.Utils;
 import io.delta.kernel.utils.Tuple2;
 import io.delta.kernel.utils.CloseableIterator;
 
 public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<Action, Boolean>>
 {
 
-    private final TableClient tableHelper;
+    private final TableClient tableClient;
     private final List<FileStatus> reverseSortedFiles;
 
     public ReverseFilesToActionsIterable(
-            TableClient tableHelper,
+            TableClient tableClient,
             Stream<FileStatus> filesUnsorted) {
-        this.tableHelper = tableHelper;
+        this.tableClient = tableClient;
         this.reverseSortedFiles = filesUnsorted
-            .sorted(Comparator.comparing((FileStatus a) -> a.getPath().getName()).reversed())
+            .sorted(Comparator.comparing(
+                    (FileStatus a) -> new Path(a.getPath()).getName()).reversed())
             .collect(Collectors.toList());
     }
 
@@ -107,29 +113,33 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
              * Requires that `filesIter.hasNext` is true
              */
             private CloseableIterator<Tuple2<Action, Boolean>> getNextActionsIter() {
-                final Path nextPath = filesIter.next().getPath();
+                final FileStatus nextFile = filesIter.next();
+                final Path nextFilePath = new Path(nextFile.getPath());
 
                 try {
-                    if (nextPath.getName().endsWith(".json")) {
+                    if (nextFilePath.getName().endsWith(".json")) {
                         return new RowToActionIterator(
-                            tableHelper.readJsonFile(
-                                    FileStatus.of(nextPath.toString()),
+                            tableClient.getJsonHandler().readJsonFile(
+                                    nextFile,
                                     SingleAction.READ_SCHEMA),
                             false // isFromCheckpoint
                         );
-                    } else if (nextPath.getName().endsWith(".parquet")) {
+                    } else if (nextFilePath.getName().endsWith(".parquet")) {
+                        ParquetHandler parquetHandler = tableClient.getParquetHandler();
+                        CloseableIterator<Tuple2<FileStatus, FileReadContext>> fileWithContext =
+                                parquetHandler.contextualizeFileReads(
+                                        Utils.singletonCloseableIterator(nextFile),
+                                        Literal.TRUE);
+
                         return new ColumnarBatchToActionIterator(
-                            tableHelper.readParquetFile(
-                                    FileStatus.of(nextPath.toString()),
-                                    Optional.empty(),
-                                    ColumnMappingMode.NONE,
-                                    SingleAction.READ_SCHEMA,
-                                    new HashMap<>()),
+                            tableClient.getParquetHandler().readParquetFiles(
+                                    fileWithContext,
+                                    SingleAction.READ_SCHEMA),
                             true // isFromCheckpoint
                         );
                     } else {
                         throw new IllegalStateException(
-                            String.format("Unexpected log file path: %s", nextPath)
+                            String.format("Unexpected log file path: %s", nextFilePath)
                         );
                     }
                 } catch (IOException ex) {
@@ -167,7 +177,7 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
         @Override
         public Tuple2<Action, Boolean> next() {
             return new Tuple2<>(
-                    SingleAction.fromRow(currentRowIter.next(), tableHelper).unwrap(),
+                    SingleAction.fromRow(currentRowIter.next(), tableClient).unwrap(),
                     isFromCheckpoint
             );
         }
@@ -182,13 +192,15 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
 
     private class ColumnarBatchToActionIterator
             implements CloseableIterator<Tuple2<Action, Boolean>> {
-        private final CloseableIterator<ColumnarBatch> batchIterator;
+        private final CloseableIterator<ParquetDataReadResult> batchIterator;
         private final boolean isFromCheckpoint;
 
         private CloseableIterator<Row> currentBatchIterator;
 
         /** Requires that Row represents a SingleAction. */
-        public ColumnarBatchToActionIterator(CloseableIterator<ColumnarBatch> batchIterator, boolean isFromCheckpoint) {
+        public ColumnarBatchToActionIterator(
+                CloseableIterator<ParquetDataReadResult> batchIterator,
+                boolean isFromCheckpoint) {
             this.batchIterator = batchIterator;
             this.isFromCheckpoint = isFromCheckpoint;
         }
@@ -196,7 +208,7 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
         @Override
         public boolean hasNext() {
             if (currentBatchIterator == null && batchIterator.hasNext()) {
-                currentBatchIterator = batchIterator.next().getRows();
+                currentBatchIterator = batchIterator.next().getData().getRows();
             }
             return currentBatchIterator != null && currentBatchIterator.hasNext();
         }
@@ -204,7 +216,7 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
         @Override
         public Tuple2<Action, Boolean> next() {
             return new Tuple2<>(
-                SingleAction.fromRow(currentBatchIterator.next(), tableHelper).unwrap(),
+                SingleAction.fromRow(currentBatchIterator.next(), tableClient).unwrap(),
                 isFromCheckpoint
             );
         }

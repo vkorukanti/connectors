@@ -16,23 +16,27 @@ import io.delta.kernel.expressions.Column;
  */
 public class PartitionRow implements Row {
 
+    private final StructType schema;
     private final Map<Integer, String> ordinalToValue;
 
-    public PartitionRow(Map<String, Integer> partitionOrdinals, Map<String, String> partitionValuesMap) {
+    public PartitionRow(
+            StructType schema,
+            Map<String, Integer> partitionOrdinals,
+            Map<String, String> partitionValuesMap) {
         this.ordinalToValue = new HashMap<>();
-
         for (Map.Entry<String, Integer> entry : partitionOrdinals.entrySet()) {
             final String partitionColumnName = entry.getKey();
             final int partitionColumnOrdinal = entry.getValue();
             final String partitionColumnValue = partitionValuesMap.get(partitionColumnName);
             ordinalToValue.put(partitionColumnOrdinal, partitionColumnValue);
         }
+        this.schema = schema;
     }
 
     @Override
     public StructType getSchema()
     {
-        return null;
+        return schema;
     }
 
     @Override

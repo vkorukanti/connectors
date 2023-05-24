@@ -16,16 +16,18 @@ import io.delta.kernel.{Scan, ScanFile, Snapshot, Table}
 import io.delta.kernel.client.{DefaultScanFileContext, DefaultTableClient}
 import io.delta.kernel.types.{ArrayType, BooleanType, IntegerType, LongType, MapType, StringType, StructType}
 import io.delta.kernel.util.GoldenTableUtils
+import org.apache.hadoop.conf.Configuration
 import org.scalatest.funsuite.AnyFunSuite
 
 class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
   test("end-to-end usage: reading a table") {
     withGoldenTable("delta-table") { path =>
-      val table = Table.forPath(path, DefaultTableClient.create())
-      val snapshot = table.getLatestSnapshot
+      val tableClient = DefaultTableClient.create(new Configuration())
+      val table = Table.forPath(tableClient, path)
+      val snapshot = table.getLatestSnapshot(tableClient)
 
       // Contains both the data schema and partition schema
-      val tableSchema = snapshot.getSchema
+      val tableSchema = snapshot.getSchema(tableClient)
 
       // Go through the tableSchema and select the columns interested in reading
       val readSchema = new StructType().add("id", LongType.INSTANCE)
@@ -33,8 +35,8 @@ class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
 
       val scanObject = scan(snapshot, readSchema, filter)
 
-      val fileIter = scanObject.getScanFiles
-      val scanState = scanObject.getScanState;
+      val fileIter = scanObject.getScanFiles(tableClient)
+      val scanState = scanObject.getScanState(tableClient);
 
       // There should be just one element in the scan state
       val serializedScanState = convertColumnarBatchRowToJSON(scanState)
@@ -52,7 +54,7 @@ class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
             convertJSONToRow(serializedFileInfo, fileColumnarBatch.getSchema),
             convertJSONToRow(serializedScanState, scanState.getSchema),
             Optional.of(testScanFileContext),
-            DefaultTableClient.create(),
+            tableClient,
             readSchema
           )
 

@@ -1,7 +1,10 @@
 package io.delta.kernel.client;
 
+import io.delta.kernel.data.ColumnarBatch;
 import io.delta.kernel.data.Row;
+import io.delta.kernel.fs.FileStatus;
 import io.delta.kernel.types.StructType;
+import io.delta.kernel.utils.CloseableIterator;
 
 /**
  * Provides JSON handling functionality to Delta Kernel. Delta Kernel can use this client to
@@ -23,4 +26,18 @@ public interface JsonHandler
      * @return
      */
     Row parseJson(String json, StructType schema);
+
+    // TODO(Verify with TD): Should this be similar to the Parquet version to allow multiple file
+    //  reading?
+    /**
+     * Read the given JSON file. Each JSON object in the files is on one line. The implementation
+     * can use this property to break the file into rows.
+     * @param fileStatus JSON file to read.
+     * @param schema List of columns to read from the JSON file. If a column is not present in
+     *               the JSON object, a null is returned for the column value.
+     * @return JSON data mentioned in the <i>schema</i> as {@link ColumnarBatch} batch.
+     */
+    CloseableIterator<ColumnarBatch> readJsonFile(
+            FileStatus fileStatus,
+            StructType schema);
 }

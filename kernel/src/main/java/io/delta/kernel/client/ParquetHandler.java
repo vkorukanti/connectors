@@ -37,9 +37,9 @@ public interface ParquetHandler
      * @param predicate Predicate to use prune file list. This is optional for the connector to use.
      *                  Delta Kernel doesn't require the connector filtering the data by this
      *                  predicate.
-     * @return Itearator of {@link FileStatus} and {@link FileReadContext} typles to read data from.
+     * @return Iterator of {@link FileStatus} and {@link FileReadContext} tuples to read data from.
      */
-    CloseableIterator<Tuple2<FileStatus, FileReadContext>> contextualizeFiles(
+    CloseableIterator<Tuple2<FileStatus, FileReadContext>> contextualizeFileReads(
             CloseableIterator<FileStatus> fileIter,
             Expression predicate);
 
@@ -56,8 +56,7 @@ public interface ParquetHandler
      */
     CloseableIterator<ParquetDataReadResult> readParquetFiles(
             CloseableIterator<Tuple2<FileStatus, FileReadContext>> fileIter,
-            StructType physicalSchema,
-            Map<String, String> partitionValues) throws IOException;
+            StructType physicalSchema) throws IOException;
 
     /**
      * Data read from a Parquet file with {@link FileStatus} attached. The {@link FileStatus} object
