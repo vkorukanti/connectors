@@ -27,7 +27,9 @@ public class Metadata implements Action {
         final Map<String, String> configuration = row.getMap(6);
         final String schemaJson = row.getString(4);
         final List<String> partitionColumns = row.getList(5);
-        Row schemaRow = tableClient.getJsonHandler().parseJson(schemaJson, StructType.READ_SCHEMA);
+        Row schemaRow = tableClient.getJsonHandler().parseJson(
+                schemaJson,
+                StructType.READ_SCHEMA);
         StructType schema = StructType.fromRow(schemaRow);
 
         return new Metadata(schemaJson, schema, partitionColumns, configuration);

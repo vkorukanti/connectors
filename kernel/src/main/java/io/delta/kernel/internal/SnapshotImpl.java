@@ -20,7 +20,6 @@ public class SnapshotImpl implements Snapshot
     private final Path dataPath;
     private final long version;
     private final LogSegment logSegment;
-    private final TableImpl tableImpl;
     private final long timestamp;
 
     private final LogReplay logReplay;
@@ -31,18 +30,17 @@ public class SnapshotImpl implements Snapshot
             Path dataPath,
             long version,
             LogSegment logSegment,
-            TableImpl tableImpl,
+            TableClient tableClient,
             long timestamp) {
         this.logPath = logPath;
         this.dataPath = dataPath;
         this.version = version;
         this.logSegment = logSegment;
-        this.tableImpl = tableImpl;
         this.timestamp = timestamp;
 
         this.logReplay = new LogReplay(
                 logPath,
-                tableImpl.tableClient,
+                tableClient,
                 logSegment);
         this.protocolAndMetadata = logReplay.lazyLoadProtocolAndMetadata();
     }
@@ -72,7 +70,7 @@ public class SnapshotImpl implements Snapshot
             getSchema(tableClient),
             getMetadata().getPartitionSchema(),
             logReplay.getAddFiles(),
-            tableImpl.tableClient
+            tableClient
         );
     }
 

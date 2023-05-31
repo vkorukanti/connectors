@@ -6,10 +6,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import io.delta.kernel.client.FileReadContext;
+import io.delta.kernel.client.JsonHandler;
 import io.delta.kernel.client.ParquetHandler;
-import io.delta.kernel.client.ParquetHandler.ParquetDataReadResult;
 import io.delta.kernel.client.TableClient;
 import io.delta.kernel.data.ColumnarBatch;
+import io.delta.kernel.data.FileDataReadResult;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.expressions.Literal;
 import io.delta.kernel.fs.FileStatus;
@@ -115,20 +116,27 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
             private CloseableIterator<Tuple2<Action, Boolean>> getNextActionsIter() {
                 final FileStatus nextFile = filesIter.next();
                 final Path nextFilePath = new Path(nextFile.getPath());
-
+                final JsonHandler jsonHandler = tableClient.getJsonHandler();
+                CloseableIterator<FileReadContext>  fileReadContextIter =
+                        jsonHandler.contextualizeFileReads(
+                                Utils.singletonCloseableIterator(Utils.getScanFileRow(nextFile)),
+                                Literal.TRUE
+                        );
                 try {
                     if (nextFilePath.getName().endsWith(".json")) {
-                        return new RowToActionIterator(
-                            tableClient.getJsonHandler().readJsonFile(
-                                    nextFile,
+                        return new ColumnarBatchToActionIterator(
+                            tableClient.getJsonHandler().readJsonFiles(
+                                    fileReadContextIter,
                                     SingleAction.READ_SCHEMA),
                             false // isFromCheckpoint
                         );
                     } else if (nextFilePath.getName().endsWith(".parquet")) {
                         ParquetHandler parquetHandler = tableClient.getParquetHandler();
-                        CloseableIterator<Tuple2<FileStatus, FileReadContext>> fileWithContext =
+                        CloseableIterator<FileReadContext> fileWithContext =
                                 parquetHandler.contextualizeFileReads(
-                                        Utils.singletonCloseableIterator(nextFile),
+                                        Utils.singletonCloseableIterator(
+                                                Utils.getScanFileRow(nextFile)
+                                        ),
                                         Literal.TRUE);
 
                         return new ColumnarBatchToActionIterator(
@@ -149,57 +157,16 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
         };
     }
 
-    private class RowToActionIterator implements CloseableIterator<Tuple2<Action, Boolean>> {
-        private final CloseableIterator<ColumnarBatch> columnarBatchIter;
-        private final boolean isFromCheckpoint;
-        private CloseableIterator<Row> currentRowIter;
-
-        /** Requires that Row represents a SingleAction. */
-        public RowToActionIterator(
-                CloseableIterator<ColumnarBatch> columnarBatchIter,
-                boolean isFromCheckpoint) {
-            this.columnarBatchIter = columnarBatchIter;
-            this.isFromCheckpoint = isFromCheckpoint;
-        }
-
-        @Override
-        public boolean hasNext() {
-            if (currentRowIter == null || !currentRowIter.hasNext()) {
-                if (!columnarBatchIter.hasNext()) {
-                    return false;
-                }
-                ColumnarBatch nextBatch = columnarBatchIter.next();
-                currentRowIter = nextBatch.getRows();
-            }
-            return currentRowIter.hasNext();
-        }
-
-        @Override
-        public Tuple2<Action, Boolean> next() {
-            return new Tuple2<>(
-                    SingleAction.fromRow(currentRowIter.next(), tableClient).unwrap(),
-                    isFromCheckpoint
-            );
-        }
-
-        @Override
-        public void close() throws IOException {
-            // TODO: Use a safe close of the both Closeables
-            currentRowIter.close();
-            columnarBatchIter.close();
-        }
-    }
-
     private class ColumnarBatchToActionIterator
             implements CloseableIterator<Tuple2<Action, Boolean>> {
-        private final CloseableIterator<ParquetDataReadResult> batchIterator;
+        private final CloseableIterator<FileDataReadResult> batchIterator;
         private final boolean isFromCheckpoint;
 
         private CloseableIterator<Row> currentBatchIterator;
 
         /** Requires that Row represents a SingleAction. */
         public ColumnarBatchToActionIterator(
-                CloseableIterator<ParquetDataReadResult> batchIterator,
+                CloseableIterator<FileDataReadResult> batchIterator,
                 boolean isFromCheckpoint) {
             this.batchIterator = batchIterator;
             this.isFromCheckpoint = isFromCheckpoint;

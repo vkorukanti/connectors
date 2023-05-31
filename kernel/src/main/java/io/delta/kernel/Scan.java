@@ -6,6 +6,7 @@ import io.delta.kernel.client.TableClient;
 import io.delta.kernel.data.ColumnVector;
 import io.delta.kernel.data.ColumnarBatch;
 import io.delta.kernel.data.DataReadResult;
+import io.delta.kernel.data.FileDataReadResult;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.expressions.Expression;
 import io.delta.kernel.expressions.Literal;
@@ -52,9 +53,9 @@ public interface Scan {
      *
      * @param tableClient Connector provided {@link TableClient} implementation.
      * @param scanState Scan state returned by {@link Scan#getScanState(TableClient)}
-     * @param scanFileRows an iterator of {@link Row}s. Each {@link Row} represents one scan file
-     *                     from the {@link ColumnarBatch} returned by
-     *                     {@link Scan#getScanFiles(TableClient)}
+     * @param scanFileRowIter an iterator of {@link Row}s. Each {@link Row} represents one scan file
+     *                        from the {@link ColumnarBatch} returned by
+     *                        {@link Scan#getScanFiles(TableClient)}
      * @param filter An optional filter that can be used for data skipping while reading the
      *               scan files.
      * @return Data read from the scan file as an iterator of {@link ColumnarBatch}es and
@@ -70,21 +71,27 @@ public interface Scan {
     static CloseableIterator<DataReadResult> readData(
             TableClient tableClient,
             Row scanState,
-            CloseableIterator<Row> scanFileRows,
+            CloseableIterator<Row> scanFileRowIter,
             Optional<Expression> filter) throws IOException {
 
         StructType readSchema = Utils.getPhysicalSchema(scanState);
 
         ParquetHandler parquetHandler = tableClient.getParquetHandler();
 
-        CloseableIterator<Tuple2<FileStatus, FileReadContext>> filesWithContexes =
+        CloseableIterator<FileReadContext> filesReadContextsIter =
                 parquetHandler.contextualizeFileReads(
-                        scanFileRows.map(row -> getFileStatus(row)),
+                        scanFileRowIter,
                         Literal.TRUE);
 
-        CloseableIterator<ParquetHandler.ParquetDataReadResult> data =
-                parquetHandler.readParquetFiles(filesWithContexes, readSchema);
+        CloseableIterator<FileDataReadResult> data =
+                parquetHandler.readParquetFiles(filesReadContextsIter, readSchema);
 
-        return data.map(batch -> new Tuple2<>(batch.getData(), Optional.empty()));
+        // TODO: Attach the selection vector associated with the file
+        return data.map(fileDataReadResult ->
+                new DataReadResult(
+                        fileDataReadResult.getData(),
+                        Optional.empty()
+                )
+        );
     }
 }

@@ -2,10 +2,13 @@ package io.delta.kernel.utils;
 
 import io.delta.kernel.data.Row;
 import io.delta.kernel.fs.FileStatus;
+import io.delta.kernel.internal.actions.AddFile;
+import io.delta.kernel.internal.data.AddFileColumnarBatch;
 import io.delta.kernel.internal.data.ScanStateRow;
 import io.delta.kernel.types.StructType;
 
 import java.io.IOException;
+import java.util.Collections;
 
 public class Utils
 {
@@ -46,6 +49,7 @@ public class Utils
      * @return Physical schema to read from the data files.
      */
     public static StructType getPhysicalSchema(Row scanState) {
+        // TODO: pending serialization and deserialization of the `StructType` schmea
         return ((ScanStateRow) scanState).getReadSchema();
     }
 
@@ -62,5 +66,20 @@ public class Utils
         boolean hasDeletionVector = scanFileInfo.isNullAt(5);
 
         return FileStatus.of(path, size, 0, hasDeletionVector);
+    }
+
+    public static Row getScanFileRow(FileStatus fileStatus) {
+        AddFile addFile = new AddFile(
+                fileStatus.getPath(),
+                Collections.emptyMap(),
+                fileStatus.getSize(),
+                fileStatus.getModificationTime(),
+                false /* dataChange */,
+                "" /* deletionVector */
+        );
+
+        return new AddFileColumnarBatch(Collections.singletonList(addFile))
+                .getRows()
+                .next();
     }
 }

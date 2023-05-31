@@ -2,12 +2,14 @@ package io.delta.kernel.client;
 
 import io.delta.kernel.data.ColumnarBatch;
 import io.delta.kernel.data.FileDataReadResult;
+import io.delta.kernel.data.Row;
 import io.delta.kernel.expressions.Expression;
 import io.delta.kernel.fs.FileStatus;
 import io.delta.kernel.parquet.ParquetFooter;
 import io.delta.kernel.types.StructType;
 import io.delta.kernel.utils.CloseableIterator;
 import io.delta.kernel.utils.Tuple2;
+import io.delta.kernel.utils.Utils;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
@@ -23,17 +25,11 @@ public class DefaultParquetHandler
     }
 
     @Override
-    public ParquetFooter readParquetFooter(String filePath)
-    {
-        throw new UnsupportedOperationException("not yet implemented");
-    }
-
-    @Override
-    public CloseableIterator<Tuple2<FileStatus, FileReadContext>> contextualizeFileReads(
-            CloseableIterator<FileStatus> fileIter,
+    public CloseableIterator<FileReadContext> contextualizeFileReads(
+            CloseableIterator<Row> fileIter,
             Expression predicate)
     {
-        return new CloseableIterator<Tuple2<FileStatus, FileReadContext>>() {
+        return new CloseableIterator<FileReadContext>() {
             @Override
             public void close()
                     throws IOException
@@ -48,9 +44,9 @@ public class DefaultParquetHandler
             }
 
             @Override
-            public Tuple2<FileStatus, FileReadContext> next()
+            public FileReadContext next()
             {
-                return new Tuple2<>(fileIter.next(), new DefaultFileReadContext());
+                return () -> fileIter.next();
             }
         };
     }
@@ -61,7 +57,7 @@ public class DefaultParquetHandler
             StructType physicalSchema) throws IOException
     {
         return new CloseableIterator<FileDataReadResult>() {
-            private FileStatus currentFile;
+            private FileReadContext currentFile;
             private CloseableIterator<ColumnarBatch> currentFileReader;
 
             @Override
@@ -73,7 +69,6 @@ public class DefaultParquetHandler
                 }
 
                 fileIter.close();
-
                 // TODO: implement safe close of multiple closeables.
             }
 
@@ -85,9 +80,10 @@ public class DefaultParquetHandler
                 // read.
                 if (currentFileReader == null || !currentFileReader.hasNext()) {
                     if (fileIter.hasNext()) {
-                        FileReadContext nextFileReadContext = fileIter.next();
+                        currentFile = fileIter.next();
+                        FileStatus fileStatus = Utils.getFileStatus(currentFile.getScanFileRow());
                         ParquetBatchReader batchReader = new ParquetBatchReader(hadoopConf);
-                        // currentFileReader = batchReader.read(nex.getPath(), physicalSchema);
+                        currentFileReader = batchReader.read(fileStatus.getPath(), physicalSchema);
                     } else {
                         return false;
                     }
@@ -100,7 +96,6 @@ public class DefaultParquetHandler
             public FileDataReadResult next()
             {
                 final ColumnarBatch data = currentFileReader.next();
-                final FileStatus file = currentFile;
                 return new FileDataReadResult() {
                     @Override
                     public ColumnarBatch getData()
@@ -109,9 +104,9 @@ public class DefaultParquetHandler
                     }
 
                     @Override
-                    public FileStatus getFileStatus()
+                    public Row getScanFileRow()
                     {
-                        return file;
+                        return currentFile.getScanFileRow();
                     }
                 };
             }

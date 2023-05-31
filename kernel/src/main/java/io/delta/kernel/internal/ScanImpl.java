@@ -29,7 +29,6 @@ import io.delta.kernel.utils.CloseableIterator;
 
 public class ScanImpl implements Scan
 {
-
     /** Complete schema of the snapshot to be scanned. */
     private final StructType snapshotSchema;
 
@@ -81,15 +80,6 @@ public class ScanImpl implements Scan
             this.metadataFilterConjunction = Optional.empty();
             this.dataFilterConjunction = Optional.empty();
         }
-
-        System.out.println("ScanImpl: snapshotSchema: " + snapshotSchema.fields());
-        System.out.println("ScanImpl: readSchema: " + readSchema.fields());
-        System.out.println("ScanImpl: snapshotPartitionSchema: " + snapshotPartitionSchema.fields());
-        System.out.println("ScanImpl: partitionColumnOrdinals: " + partitionColumnOrdinals.toString());
-
-        System.out.println("ScanImpl: snapshotPartitionSchema: " + snapshotPartitionSchema.fields());
-        System.out.println("ScanImpl: metadataFilterConjunction: " + metadataFilterConjunction.toString());
-        System.out.println("ScanImpl: dataFilterConjunction: " + dataFilterConjunction.toString());
     }
 
     /**
