@@ -20,7 +20,7 @@ class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
   test("end-to-end usage: reading a table") {
     withGoldenTable("delta-table") { path =>
       val tableClient = DefaultTableClient.create(new Configuration())
-      val table = Table.forPath(tableClient, path)
+      val table = Table.forPath(path)
       val snapshot = table.getLatestSnapshot(tableClient)
 
       // Contains both the data schema and partition schema
@@ -45,7 +45,7 @@ class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
           val serializedFileInfo = convertColumnarBatchRowToJSON(fileColumnarBatch, rowId)
 
           // START OF THE CODE THAT WILL BE EXECUTED ON THE EXECUTOR
-          val dataBatches = ScanFile.readData(
+          val dataBatches = Scan.readData(
             tableClient,
             scanState,
             // convertJSONToRow(serializedScanState, scanState.getSchema),
@@ -56,7 +56,7 @@ class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
 
           while(dataBatches.hasNext) {
             val batch = dataBatches.next()
-            val valueColVector = batch._1.getColumnVector(0)
+            val valueColVector = batch.getData.getColumnVector(0)
             actualValueColumnValues.append(vectorToLongs(valueColVector): _*)
           }
           // END OF THE CODE THAT WILL BE EXECUTED ON THE EXECUTOR
@@ -69,7 +69,7 @@ class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
   test("end-to-end usage: reading a table with checkpoint") {
     withGoldenTable("basic-with-checkpoint") { path =>
       val tableClient = DefaultTableClient.create(new Configuration())
-      val table = Table.forPath(tableClient, path)
+      val table = Table.forPath(path)
       val snapshot = table.getLatestSnapshot(tableClient)
 
       // Contains both the data schema and partition schema
@@ -94,7 +94,7 @@ class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
           val serializedFileInfo = convertColumnarBatchRowToJSON(fileColumnarBatch, rowId)
 
           // START OF THE CODE THAT WILL BE EXECUTED ON THE EXECUTOR
-          val dataBatches = ScanFile.readData(
+          val dataBatches = Scan.readData(
             tableClient,
             scanState,
             // convertJSONToRow(serializedScanState, scanState.getSchema),
@@ -105,7 +105,7 @@ class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
 
           while(dataBatches.hasNext) {
             val batch = dataBatches.next()
-            val valueColVector = batch._1.getColumnVector(0)
+            val valueColVector = batch.getData.getColumnVector(0)
             actualValueColumnValues.append(vectorToLongs(valueColVector): _*)
           }
           // END OF THE CODE THAT WILL BE EXECUTED ON THE EXECUTOR

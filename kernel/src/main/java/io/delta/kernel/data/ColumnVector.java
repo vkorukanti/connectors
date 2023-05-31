@@ -38,58 +38,82 @@ public interface ColumnVector extends AutoCloseable {
      * Returns the boolean type value for {@code rowId}. The return value is undefined and can be
      * anything, if the slot for {@code rowId} is null.
      */
-    boolean getBoolean(int rowId);
+    default boolean getBoolean(int rowId) {
+        throw new UnsupportedOperationException("Invalid value request for data type");
+    }
     /**
      * Returns the byte type value for {@code rowId}. The return value is undefined and can be
      * anything, if the slot for {@code rowId} is null.
      */
-    byte getByte(int rowId);
+    default byte getByte(int rowId) {
+        throw new UnsupportedOperationException("Invalid value request for data type");
+    }
 
     /**
      * Returns the short type value for {@code rowId}. The return value is undefined and can be
      * anything, if the slot for {@code rowId} is null.
      */
-    short getShort(int rowId);
+    default short getShort(int rowId) {
+        throw new UnsupportedOperationException("Invalid value request for data type");
+    }
 
     /**
      * Returns the int type value for {@code rowId}. The return value is undefined and can be
      * anything, if the slot for {@code rowId} is null.
      */
-    int getInt(int rowId);
+    default int getInt(int rowId) {
+        throw new UnsupportedOperationException("Invalid value request for data type");
+    }
 
     /**
      * Returns the long type value for {@code rowId}. The return value is undefined and can be
      * anything, if the slot for {@code rowId} is null.
      */
-    long getLong(int rowId);
+    default long getLong(int rowId) {
+        throw new UnsupportedOperationException("Invalid value request for data type");
+    }
 
     /**
      * Returns the float type value for {@code rowId}. The return value is undefined and can be
      * anything, if the slot for {@code rowId} is null.
      */
-    float getFloat(int rowId);
+    default float getFloat(int rowId) {
+        throw new UnsupportedOperationException("Invalid value request for data type");
+    }
 
     /**
      * Returns the double type value for {@code rowId}. The return value is undefined and can be
      * anything, if the slot for {@code rowId} is null.
      */
-    double getDouble(int rowId);
+    default double getDouble(int rowId) {
+        throw new UnsupportedOperationException("Invalid value request for data type");
+    }
 
     /**
      * Returns the binary type value for {@code rowId}. If the slot for {@code rowId} is null, it
      * should return null.
      */
-    byte[] getBinary(int rowId);
+    default byte[] getBinary(int rowId) {
+        throw new UnsupportedOperationException("Invalid value request for data type");
+    }
 
     /**
      * Returns the string type value for {@code rowId}. If the slot for {@code rowId} is null, it
      * should return null.
      */
-    String getString(int rowId);
+    default String getString(int rowId) {
+        throw new UnsupportedOperationException("Invalid value request for data type");
+    }
 
-    <K, V> Map<K, V> getMap(int rowId);
+    default <K, V> Map<K, V> getMap(int rowId) {
+        throw new UnsupportedOperationException("Invalid value request for data type");
+    }
 
-    Row getStruct(int rowId);
+    default Row getStruct(int rowId) {
+        throw new UnsupportedOperationException("Invalid value request for data type");
+    }
 
-    <T> List<T> getArray(int rowId);
+    default <T> List<T> getArray(int rowId) {
+        throw new UnsupportedOperationException("Invalid value request for data type");
+    }
 }

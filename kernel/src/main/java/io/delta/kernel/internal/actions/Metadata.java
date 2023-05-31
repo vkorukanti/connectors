@@ -5,12 +5,14 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import io.delta.kernel.client.TableClient;
+import io.delta.kernel.data.ColumnarBatch;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.types.ArrayType;
 import io.delta.kernel.types.LongType;
 import io.delta.kernel.types.MapType;
 import io.delta.kernel.types.StringType;
 import io.delta.kernel.types.StructType;
+import io.delta.kernel.utils.Utils;
 
 public class Metadata implements Action {
 
@@ -27,10 +29,10 @@ public class Metadata implements Action {
         final Map<String, String> configuration = row.getMap(6);
         final String schemaJson = row.getString(4);
         final List<String> partitionColumns = row.getList(5);
-        Row schemaRow = tableClient.getJsonHandler().parseJson(
-                schemaJson,
+        ColumnarBatch output = tableClient.getJsonHandler().parseJson(
+                Utils.singletonColumnVector(schemaJson),
                 StructType.READ_SCHEMA);
-        StructType schema = StructType.fromRow(schemaRow);
+        StructType schema = StructType.fromRow(output.getRows().next());
 
         return new Metadata(schemaJson, schema, partitionColumns, configuration);
     }

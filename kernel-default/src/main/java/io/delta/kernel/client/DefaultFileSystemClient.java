@@ -7,7 +7,6 @@ import io.delta.storage.LogStore;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
-import java.io.DataInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Iterator;
@@ -25,7 +24,7 @@ public class DefaultFileSystemClient
     }
 
     @Override
-    public CloseableIterator<FileStatus> listFiles(String directoryPath)
+    public CloseableIterator<FileStatus> listFrom(String filePath)
             throws FileNotFoundException
     {
         return new CloseableIterator<FileStatus>() {
@@ -33,7 +32,7 @@ public class DefaultFileSystemClient
 
             {
                 try {
-                    iter = logStore.listFrom(new Path(directoryPath), hadoopConf);
+                    iter = logStore.listFrom(new Path(filePath), hadoopConf);
                 } catch (IOException ex) {
                     throw new RuntimeException("Could not resolve the FileSystem", ex);
                 }
@@ -56,12 +55,5 @@ public class DefaultFileSystemClient
             @Override
             public void close() throws IOException { }
         };
-    }
-
-    @Override
-    public DataInputStream readFile(FileStatus filePath)
-            throws IOException
-    {
-        return null;
     }
 }

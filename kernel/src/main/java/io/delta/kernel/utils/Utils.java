@@ -1,14 +1,19 @@
 package io.delta.kernel.utils;
 
+import io.delta.kernel.data.ColumnVector;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.fs.FileStatus;
 import io.delta.kernel.internal.actions.AddFile;
 import io.delta.kernel.internal.data.AddFileColumnarBatch;
 import io.delta.kernel.internal.data.ScanStateRow;
+import io.delta.kernel.types.DataType;
+import io.delta.kernel.types.StringType;
 import io.delta.kernel.types.StructType;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 public class Utils
 {
@@ -39,6 +44,40 @@ public class Utils
             {
                 accessed = true;
                 return elem;
+            }
+        };
+    }
+
+    public static ColumnVector singletonColumnVector(String value) {
+        return new ColumnVector() {
+            @Override
+            public DataType getDataType()
+            {
+                return StringType.INSTANCE;
+            }
+
+            @Override
+            public int getSize()
+            {
+                return 1;
+            }
+
+            @Override
+            public void close() {}
+
+            @Override
+            public boolean isNullAt(int rowId)
+            {
+                return value == null;
+            }
+
+            @Override
+            public String getString(int rowId)
+            {
+                if (rowId != 0) {
+                    throw new IllegalArgumentException("Invalid row id: " + rowId);
+                }
+                return value;
             }
         };
     }

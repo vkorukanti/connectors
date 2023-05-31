@@ -186,7 +186,7 @@ public class SnapshotManager implements Logging
                     tableClient,
                     lastCheckpointOpt,
                     Optional.empty()))
-            .orElse(new InitialSnapshot(tableImpl.logPath, tableImpl.dataPath, tableImpl));
+            .orElse(new InitialSnapshot(tableImpl.logPath, tableImpl.dataPath, tableClient));
     }
 
     private SnapshotImpl createSnapshot(
