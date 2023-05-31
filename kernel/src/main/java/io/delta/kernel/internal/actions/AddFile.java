@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import io.delta.kernel.data.Row;
+import io.delta.kernel.fs.Path;
 import io.delta.kernel.types.*;
 import io.delta.kernel.types.BooleanType;
 import io.delta.kernel.types.LongType;
@@ -71,6 +72,22 @@ public class AddFile extends FileAction {
     @Override
     public AddFile copyWithDataChange(boolean dataChange) {
         return this; // TODO
+    }
+
+    public AddFile withAbsolutePath(Path dataPath) {
+        Path filePath = new Path(path);
+        if (filePath.isAbsolute()) {
+            return this;
+        }
+        Path absPath = new Path(dataPath, filePath);
+        return new AddFile(
+                absPath.toString(),
+                this.partitionValues,
+                this.size,
+                this.modificationTime,
+                this.dataChange,
+                this.deletionVector
+        );
     }
 
     public Map<String, String> getPartitionValues() {

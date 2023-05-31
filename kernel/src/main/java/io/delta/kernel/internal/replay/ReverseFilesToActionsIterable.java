@@ -174,7 +174,9 @@ public class ReverseFilesToActionsIterable implements CloseableIterable<Tuple2<A
 
         @Override
         public boolean hasNext() {
-            if (currentBatchIterator == null && batchIterator.hasNext()) {
+            if (
+                    (currentBatchIterator == null || !currentBatchIterator.hasNext()) &&
+                    batchIterator.hasNext()) {
                 currentBatchIterator = batchIterator.next().getData().getRows();
             }
             return currentBatchIterator != null && currentBatchIterator.hasNext();

@@ -444,7 +444,7 @@ public class SnapshotManager implements Logging
                new HashSet<>(newCheckpoint.getCorrespondingFiles(tableImpl.logPath));
            final List<FileStatus> newCheckpointFileList = checkpoints
                .stream()
-               .filter(f -> newCheckpointPaths.contains(f.getPath()))
+               .filter(f -> newCheckpointPaths.contains(new Path(f.getPath())))
                .collect(Collectors.toList());
            assert (newCheckpointFileList.size() == newCheckpointPaths.size()) :
                String.format(

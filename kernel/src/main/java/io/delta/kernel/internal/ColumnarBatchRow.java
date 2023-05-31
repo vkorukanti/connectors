@@ -68,13 +68,13 @@ public class ColumnarBatchRow implements Row
     @Override
     public <T> List<T> getList(int ordinal)
     {
-        return null;
+        return columnVector(ordinal).getArray(rowId);
     }
 
     @Override
     public <K, V> Map<K, V> getMap(int ordinal)
     {
-        return null;
+        return columnVector(ordinal).getMap(rowId);
     }
 
     private ColumnVector columnVector(int ordinal) {

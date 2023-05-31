@@ -108,7 +108,8 @@ public class DefaultColumnVector implements ColumnVector
     @Override
     public <K, V> Map<K, V> getMap(int rowId)
     {
-        return null;
+        assertValidRowId(rowId);
+        return rows.get(rowId).getMap(columnOrdinal);
     }
 
     @Override
@@ -121,7 +122,8 @@ public class DefaultColumnVector implements ColumnVector
     @Override
     public <T> List<T> getArray(int rowId)
     {
-        return null;
+        assertValidRowId(rowId);
+        return rows.get(rowId).getList(columnOrdinal);
     }
 
     @Override

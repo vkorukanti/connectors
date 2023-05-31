@@ -40,6 +40,7 @@ public class SnapshotImpl implements Snapshot
 
         this.logReplay = new LogReplay(
                 logPath,
+                dataPath,
                 tableClient,
                 logSegment);
         this.protocolAndMetadata = logReplay.lazyLoadProtocolAndMetadata();

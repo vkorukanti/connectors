@@ -14,4 +14,8 @@ public interface FileReadContext
      * @return File scan {@link Row}
      */
     Row getScanFileRow();
+
+    /**
+     * Get the scan state associated with the read context.
+     */
 }

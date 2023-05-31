@@ -21,6 +21,7 @@ public interface FileHandler
      * predicates.
      *
      * @param fileIter Iterator of {@link FileStatus}
+     * @param scanState Scan state as {@link Row}
      * @param predicate Predicate to use prune data file. This is optional for the connector to use.
      *                  Delta Kernel doesn't require the connector filtering the data by this
      *                  predicate.

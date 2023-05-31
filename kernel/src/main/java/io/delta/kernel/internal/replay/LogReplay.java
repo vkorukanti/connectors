@@ -19,17 +19,24 @@ import io.delta.kernel.utils.CloseableIterator;
 
 public class LogReplay {
 
+    private final Path logPath;
+    private final Path dataPath;
     private final LogSegment logSegment;
     private final CloseableIterable<Tuple2<Action, Boolean>> reverseActionsIterable;
     private final Lazy<Tuple2<Protocol, Metadata>> protocolAndMetadata;
 
     public LogReplay(
             Path logPath,
+            Path dataPath,
             TableClient tableHelper,
             LogSegment logSegment) {
+        this.logPath = logPath;
+        this.dataPath = dataPath;
         this.logSegment = logSegment;
 
-        final Stream<FileStatus> allFiles = Stream.concat(logSegment.checkpoints.stream(), logSegment.deltas.stream());
+        final Stream<FileStatus> allFiles = Stream.concat(
+                logSegment.checkpoints.stream(),
+                logSegment.deltas.stream());
         assertLogFilesBelongToTable(logPath, allFiles);
 
         this.reverseActionsIterable = new ReverseFilesToActionsIterable(
@@ -48,7 +55,7 @@ public class LogReplay {
 
     public CloseableIterator<AddFile> getAddFiles() {
         final CloseableIterator<Tuple2<Action, Boolean>> reverseActionsIter = reverseActionsIterable.iterator();
-        return new ReverseActionsToAddFilesIterator(reverseActionsIter);
+        return new ReverseActionsToAddFilesIterator(dataPath, reverseActionsIter);
     }
 
     /////////////////////

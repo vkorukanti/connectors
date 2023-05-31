@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Optional;
 
+import io.delta.kernel.fs.Path;
 import io.delta.kernel.internal.actions.Action;
 import io.delta.kernel.internal.actions.AddFile;
 import io.delta.kernel.internal.actions.RemoveFile;
@@ -14,15 +15,16 @@ import io.delta.kernel.utils.CloseableIterator;
 public class ReverseActionsToAddFilesIterator
     extends FilteredCloseableIterator<AddFile, Tuple2<Action, Boolean>> {
 
+    private final Path dataPath;
     private final CloseableIterator<Tuple2<Action, Boolean>> reverseActionIter;
-
     private final HashMap<UniqueFileActionTuple, RemoveFile> tombstonesFromJson;
-
     private final HashMap<UniqueFileActionTuple, AddFile> addFilesFromJson;
 
-    public ReverseActionsToAddFilesIterator(CloseableIterator<Tuple2<Action, Boolean>> reverseActionIter) {
+    public ReverseActionsToAddFilesIterator(
+            Path dataPath,
+            CloseableIterator<Tuple2<Action, Boolean>> reverseActionIter) {
         super(reverseActionIter);
-
+        this.dataPath = dataPath;
         this.reverseActionIter = reverseActionIter;
         this.tombstonesFromJson = new HashMap<>();
         this.addFilesFromJson = new HashMap<>();
@@ -34,7 +36,9 @@ public class ReverseActionsToAddFilesIterator
         final boolean isFromCheckpoint = element._2;
 
         if (action instanceof AddFile) {
-            final AddFile add = ((AddFile) action).copyWithDataChange(false);
+            final AddFile add = ((AddFile) action)
+                    .copyWithDataChange(false)
+                    .withAbsolutePath(dataPath);
             final UniqueFileActionTuple key =
                 new UniqueFileActionTuple(add.toURI(), add.getDeletionVectorUniqueId());
             final boolean alreadyDeleted = tombstonesFromJson.containsKey(key);
@@ -55,7 +59,9 @@ public class ReverseActionsToAddFilesIterator
             // Note: There's no reason to put a RemoveFile from a checkpoint into tombstones map
             //       since, when we generate a checkpoint, any corresponding AddFile would have
             //       been excluded
-            final RemoveFile remove = ((RemoveFile) action).copyWithDataChange(false);
+            final RemoveFile remove = ((RemoveFile) action)
+                    .copyWithDataChange(false)
+                    .withAbsolutePath(dataPath);
             final UniqueFileActionTuple key =
                 new UniqueFileActionTuple(remove.toURI(), remove.getDeletionVectorUniqueId());
 
