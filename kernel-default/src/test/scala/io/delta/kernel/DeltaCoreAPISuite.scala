@@ -111,7 +111,7 @@ class DeltaCoreAPISuite extends AnyFunSuite with GoldenTableUtils {
           // END OF THE CODE THAT WILL BE EXECUTED ON THE EXECUTOR
         })
       }
-      assert(actualValueColumnValues.toSet === Seq.range(start = 0, end = 20).toSet)
+      assert(actualValueColumnValues.toSet === Seq.range(start = 0, end = 150).toSet)
     }
   }
 

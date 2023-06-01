@@ -2,7 +2,10 @@ package io.delta.kernel.client;
 
 import io.delta.kernel.data.ParquetRowRecord;
 import io.delta.kernel.data.Row;
+import io.delta.kernel.types.ArrayType;
 import io.delta.kernel.types.DataType;
+import io.delta.kernel.types.MapType;
+import io.delta.kernel.types.StringType;
 import io.delta.kernel.types.StructField;
 import io.delta.kernel.types.StructType;
 import io.delta.kernel.utils.CloseableIterator;
@@ -24,6 +27,7 @@ import org.apache.parquet.io.api.RecordMaterializer;
 import org.apache.parquet.schema.MessageType;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -165,6 +169,22 @@ public class ParquetRowReader
                 final DataType dataType = field.getDataType();
                 if (dataType instanceof StructType) {
                     converters[i] = new RowRecordGroupConverter(this, i, (StructType) dataType);
+                } else if (dataType instanceof ArrayType) {
+                    final ArrayType arrayType = (ArrayType) dataType;
+                    StructType structType = new StructType()
+                            .add("list",
+                                    new StructType()
+                                            .add("element", arrayType.getElementType())
+                            );
+                    converters[i] = new RowRecordGroupConverter(this, i, structType);
+                } else if (dataType instanceof MapType) {
+                    final MapType mapType = (MapType) dataType;
+                    StructType structType = new StructType()
+                            .add("key_value",
+                                    new StructType()
+                                            .add("key", mapType.getKeyType())
+                                            .add("value", mapType.getValueType()));
+                    converters[i] = new RowRecordGroupConverter(this, i, structType);
                 } else {
                     converters[i] = new RowRecordPrimitiveConverter(this, i, dataType);
                 }
@@ -182,6 +202,11 @@ public class ParquetRowReader
         public void start()
         {
             this.currentRecordValues = new Object[converters.length];
+            for (Converter converter : converters) {
+                if (!converter.isPrimitive()) {
+                    converter.asGroupConverter().start();
+                }
+            }
         }
 
         @Override
@@ -193,7 +218,16 @@ public class ParquetRowReader
                 }
             }
             if (parent != null) {
-                parent.set(fieldIndex, currentRecordValues);
+                // Convert complex types to appropriate return type
+                Object convertValue = currentRecordValues;
+                if (readSchema instanceof StructType) {
+                    if (Arrays.stream(currentRecordValues).filter(r -> r != null).count() == 0) {
+                        convertValue = null;
+                    } else {
+                        convertValue = new ParquetRowRecord(readSchema, currentRecordValues);
+                    }
+                }
+                parent.set(fieldIndex, convertValue);
             }
         }
 
@@ -227,7 +261,13 @@ public class ParquetRowReader
         @Override
         public void addBinary(Binary value)
         {
-            parent.set(fieldIndex, value);
+            Object newValue = value;
+            if (dataType instanceof StringType) {
+                newValue = value.toStringUsingUTF8();
+            } else {
+                // TODO
+            }
+            parent.set(fieldIndex, newValue);
         }
 
         @Override

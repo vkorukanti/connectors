@@ -3,8 +3,12 @@ package io.delta.kernel.client;
 import io.delta.kernel.types.DataType;
 import io.delta.kernel.types.StructField;
 import io.delta.kernel.types.StructType;
+import org.apache.parquet.schema.GroupType;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.Type;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class Utils
 {
@@ -29,7 +33,8 @@ public class Utils
                     if (type == null) {
                         return null;
                     }
-                    return new MessageType(column.getName(), type);
+                    Type prunedSubfields = pruneSubfields(type, column.getDataType());
+                    return new MessageType(column.getName(), prunedSubfields);
                 })
                 .filter(type -> type != null)
                 .reduce(MessageType::union)
@@ -53,6 +58,30 @@ public class Utils
 
         // Create a type and return.
         return parquetTypeFromDeltaType(column.getDataType());
+    }
+
+    private static Type pruneSubfields(Type type, DataType deltaDatatype) {
+        if (!(deltaDatatype instanceof StructType)) {
+            // there is no pruning for non-struct types
+            return type;
+        }
+
+        GroupType groupType = (GroupType) type;
+        StructType deltaStructType = (StructType) deltaDatatype;
+        List<Type> newParquetSubFields = new ArrayList<>();
+        for (StructField subField : deltaStructType.fields()) {
+            String subFieldName = subField.getName();
+            Type parquetSubFieldType = groupType.getType(subFieldName);
+            if (parquetSubFieldType == null) {
+                for (org.apache.parquet.schema.Type typeTemp : groupType.getFields()) {
+                    if (typeTemp.getName().equalsIgnoreCase(subFieldName)) {
+                        parquetSubFieldType = type;
+                    }
+                }
+            }
+            newParquetSubFields.add(parquetSubFieldType);
+        }
+        return groupType.withNewFields(newParquetSubFields);
     }
 
     private static Type parquetTypeFromDeltaType(DataType deltaType) {

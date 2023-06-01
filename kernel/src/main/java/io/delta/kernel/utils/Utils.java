@@ -102,9 +102,8 @@ public class Utils
     public static FileStatus getFileStatus(Row scanFileInfo) {
         String path = scanFileInfo.getString(0);
         Long size = scanFileInfo.getLong(2);
-        boolean hasDeletionVector = scanFileInfo.isNullAt(5);
 
-        return FileStatus.of(path, size, 0, hasDeletionVector);
+        return FileStatus.of(path, size, 0);
     }
 
     public static Row getScanFileRow(FileStatus fileStatus) {
@@ -113,8 +112,7 @@ public class Utils
                 Collections.emptyMap(),
                 fileStatus.getSize(),
                 fileStatus.getModificationTime(),
-                false /* dataChange */,
-                "" /* deletionVector */
+                false /* dataChange */
         );
 
         return new AddFileColumnarBatch(Collections.singletonList(addFile))

@@ -27,9 +27,8 @@ public class AddFile extends FileAction {
         final long size = row.getLong(2);
         final long modificationTime = row.getLong(3);
         final boolean dataChange = row.getBoolean(4);
-        final String deletionVector = row.getString(5);
 
-        return new AddFile(path, partitionValues, size, modificationTime, dataChange, deletionVector);
+        return new AddFile(path, partitionValues, size, modificationTime, dataChange);
     }
 
     public static final StructType READ_SCHEMA = new StructType()
@@ -37,9 +36,7 @@ public class AddFile extends FileAction {
         .add("partitionValues", new MapType(StringType.INSTANCE, StringType.INSTANCE, false))
         .add("size", LongType.INSTANCE)
         .add("modificationTime", LongType.INSTANCE)
-        .add("dataChange", BooleanType.INSTANCE)
-        // TODO: Fix the DV type to be a struct
-        .add("deletionVector", StringType.INSTANCE);
+        .add("dataChange", BooleanType.INSTANCE);
 
     ////////////////////////////////////////////////////////////////////////////////
     // Instance Fields / Methods
@@ -48,25 +45,21 @@ public class AddFile extends FileAction {
     private final Map<String, String> partitionValues;
     private final long size;
     private final long modificationTime;
-    private final String deletionVector;
 
     public AddFile(
             String path,
             Map<String, String> partitionValues,
             long size,
             long modificationTime,
-            boolean dataChange,
-            String deletionVector) {
+            boolean dataChange) {
         super(path, dataChange);
 
+        if (partitionValues == null) {
+            partitionValues = Collections.emptyMap();
+        }
         this.partitionValues = partitionValues;
         this.size = size;
         this.modificationTime = modificationTime;
-        this.deletionVector = deletionVector;
-    }
-
-    public Optional<String> getDeletionVectorUniqueId() {
-        return Optional.ofNullable(deletionVector);
     }
 
     @Override
@@ -85,13 +78,17 @@ public class AddFile extends FileAction {
                 this.partitionValues,
                 this.size,
                 this.modificationTime,
-                this.dataChange,
-                this.deletionVector
+                this.dataChange
         );
     }
 
     public Map<String, String> getPartitionValues() {
         return Collections.unmodifiableMap(partitionValues);
+    }
+
+    public Optional<String> getDeletionVectorUniqueId() {
+        // TODO:
+        return Optional.empty();
     }
 
     public long getSize() {

@@ -1,5 +1,7 @@
 package io.delta.kernel.internal.actions;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -72,6 +74,9 @@ public class Metadata implements Action {
             Map<String, String> configuration) {
         this.schemaString = schemaString;
         this.schema = schema;
+        if (partitionColumns == null) {
+            partitionColumns = Collections.emptyList();
+        }
         this.partitionColumns = partitionColumns;
         this.configuration = configuration;
     }

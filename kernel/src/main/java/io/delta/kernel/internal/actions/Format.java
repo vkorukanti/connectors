@@ -1,6 +1,7 @@
 package io.delta.kernel.internal.actions;
 
 import io.delta.kernel.data.Row;
+import io.delta.kernel.types.MapType;
 import io.delta.kernel.types.StringType;
 import io.delta.kernel.types.StructType;
 
@@ -14,8 +15,8 @@ public class Format {
     }
 
     public static final StructType READ_SCHEMA = new StructType()
-        .add("provider", StringType.INSTANCE);
-        // TODO: options
+            .add("provider", StringType.INSTANCE)
+            .add("options", new MapType(StringType.INSTANCE, StringType.INSTANCE, false));
 
     private final String provider;
 
