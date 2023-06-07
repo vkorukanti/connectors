@@ -16,7 +16,9 @@ public interface ParquetHandler
     extends FileHandler
 {
     /**
-     * Read the Parquet format file at given location and return the data.
+     * Read the Parquet format file at given location and return theSt data.
+     *
+     * TODO: add note that the ROW_INDEX column must be populated (and point to the StructField.**)
      *
      * @param fileIter Iterator of ({@link FileStatus}, {@link FileReadContext}) objects to read
      *                 data from.

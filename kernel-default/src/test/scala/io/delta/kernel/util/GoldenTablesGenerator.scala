@@ -83,4 +83,25 @@ class GoldenTablesGenerator extends QueryTest with SharedSparkSession {
         .mode("append").save(path)
     }
   }
+
+  generate("parquet-basic-row-indexes") { path =>
+    // write three files such that the row index should = id % 10
+    spark.range(0, 10)
+      .coalesce(1)
+      .sortWithinPartitions("id")
+      .write
+      .parquet(path)
+    spark.range(10, 20)
+      .coalesce(1)
+      .sortWithinPartitions("id")
+      .write
+      .mode("append")
+      .parquet(path)
+    spark.range(20, 30)
+      .coalesce(1)
+      .sortWithinPartitions("id")
+      .write
+      .mode("append")
+      .parquet(path)
+  }
 }
