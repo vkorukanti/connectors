@@ -87,4 +87,8 @@ public class ParquetRowRecord implements Row
         }
         return columnNameToIndexMap;
     }
+
+    public void setLong(int ordinal, long value) {
+        values[ordinal] = value;
+    }
 }

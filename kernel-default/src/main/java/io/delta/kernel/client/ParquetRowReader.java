@@ -35,64 +35,7 @@ import static java.util.Objects.requireNonNull;
 
 public class ParquetRowReader
 {
-
-    private final Configuration configuration;
-
-    public ParquetRowReader(Configuration configuration)
-    {
-        this.configuration = requireNonNull(configuration, "configuration is null");
-    }
-
-    public CloseableIterator<Row> read(String path, StructType schema) {
-        ParquetRecordReader<Row> reader =
-                new ParquetRecordReader<>(
-                        new RowReadSupport(schema),
-                        FilterCompat.NOOP);
-
-        Path filePath = new Path(path);
-        try {
-            FileSystem fs = filePath.getFileSystem(configuration);
-            FileStatus fileStatus = fs.getFileStatus(filePath);
-            reader.initialize(
-                    new FileSplit(filePath, 0, fileStatus.getLen(), new String[0]),
-                    configuration,
-                    Reporter.NULL
-            );
-        } catch (IOException | InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-
-        return new CloseableIterator<Row>() {
-            @Override
-            public void close()
-                    throws IOException
-            {
-                reader.close();
-            }
-
-            @Override
-            public boolean hasNext()
-            {
-                try {
-                    return reader.nextKeyValue();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }
-
-            @Override
-            public Row next()
-            {
-                try {
-                    return reader.getCurrentValue();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        };
-    }
-
-    public static class RowReadSupport extends ReadSupport<Row> {
+    public static class RowReadSupport extends ReadSupport<ParquetRowRecord> {
         private final StructType readSchema;
 
         public RowReadSupport(StructType readSchema)
@@ -107,7 +50,7 @@ public class ParquetRowReader
         }
 
         @Override
-        public RecordMaterializer<Row> prepareForRead(
+        public RecordMaterializer<ParquetRowRecord> prepareForRead(
                 Configuration configuration,
                 Map<String, String> keyValueMetaData,
                 MessageType fileSchema,
@@ -117,7 +60,7 @@ public class ParquetRowReader
         }
     }
 
-    public static class RowRecordMaterializer extends RecordMaterializer<Row> {
+    public static class RowRecordMaterializer extends RecordMaterializer<ParquetRowRecord> {
         private final StructType readSchema;
         private final RowRecordGroupConverter rowRecordGroupConverter;
 
@@ -133,7 +76,7 @@ public class ParquetRowReader
         }
 
         @Override
-        public Row getCurrentRecord()
+        public ParquetRowRecord getCurrentRecord()
         {
             return new ParquetRowRecord(readSchema, rowRecordGroupConverter.getCurrentRecord());
         }
