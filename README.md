@@ -1,4 +1,4 @@
-# DEPRECATED
+# 🛑 DEPRECATED 🛑
 
 The code under this repository has been moved under `connectors` module in https://github.com/delta-io/delta repository. No changes are allowed to this repository. Any issues or changes, please propose them on the https://github.com/delta-io/delta repository. More details on deprecation are found at delta-io/connectors#556.
 
