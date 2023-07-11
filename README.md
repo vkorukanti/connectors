@@ -1,3 +1,8 @@
+# DEPRECATED
+
+The code under this repository has been moved under `connectors` module in delta-io/delta repository. No changes are allowed to this repository. Any issues or changes, please propose them on the delta-io/delta repository. More details on deprecation are found at delta-io/connectors#556.
+
+
 # <img src="https://docs.delta.io/latest/_static/delta-lake-white.png" width="150" alt="Delta Lake Logo"></img> Connectors
 
 [![Test](https://github.com/delta-io/connectors/actions/workflows/test.yaml/badge.svg)](https://github.com/delta-io/connectors/actions/workflows/test.yaml)
